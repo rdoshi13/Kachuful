@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { PublicGameView, RoomStatePayload, Suit } from "@kachuful/shared-types";
-import type { Socket } from "socket.io-client";
 import { createRoom, joinRoom } from "../lib/api";
 import {
   clearSession,
@@ -10,7 +9,7 @@ import {
   saveSession,
   type StoredSession,
 } from "../lib/session";
-import { createGameSocket } from "../lib/socket";
+import { createGameSocket, type GameSocket } from "../lib/socket";
 import { PlayingCard } from "./PlayingCard";
 
 const bidValues = (max: number): number[] =>
@@ -37,7 +36,7 @@ export function GameClient() {
     string | null
   >(null);
 
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<GameSocket | null>(null);
 
   useEffect(() => {
     const existing = loadSession();

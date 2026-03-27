@@ -191,3 +191,34 @@ If priorities conflict, prefer rule correctness over UI complexity.
 - Completed matches are written to a JSON file (default: `.data/match-history.json`).
 - Override path with `MATCH_HISTORY_FILE=/absolute/path/to/history.json`.
 - Read room history via `GET /rooms/:code/history`.
+
+## Cloudflare Backend (In Progress)
+
+- Worker package path: `apps/cloudflare-server`
+- Uses a Durable Object (`GameHub`) for authoritative room/game coordination.
+- HTTP endpoints:
+  - `GET /health`
+  - `POST /rooms`
+  - `POST /rooms/:code/join`
+  - `GET /rooms/:code/history`
+- WebSocket endpoint:
+  - `GET /ws` with message envelope `{ event, payload }`
+
+### Deploy Commands
+
+From repository root:
+
+```bash
+pnpm --filter @kachuful/cloudflare-server deploy
+```
+
+### Web App Environment (for Cloudflare backend)
+
+Set in web environment:
+
+```bash
+NEXT_PUBLIC_API_BASE=https://<your-worker>.workers.dev
+NEXT_PUBLIC_SOCKET_URL=https://<your-worker>.workers.dev
+```
+
+`NEXT_PUBLIC_SOCKET_URL` can stay as HTTPS; client converts to WSS and appends `/ws`.

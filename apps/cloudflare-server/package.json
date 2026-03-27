@@ -1,0 +1,17 @@
+{
+  "name": "@kachuful/cloudflare-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@kachuful/game-engine": "workspace:*",
+    "@kachuful/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "wrangler": "^4.77.0"
+  }
+}
