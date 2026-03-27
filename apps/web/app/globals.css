@@ -1,0 +1,310 @@
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --accent: #116149;
+  --accent-weak: #e3f4ee;
+  --border: #d7dee9;
+  --danger: #9b1c1c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top right, #d5ede5 0%, var(--bg) 45%);
+  color: var(--text);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+main {
+  width: min(960px, 94vw);
+  margin: 0 auto;
+  padding: 1.2rem 0 2rem;
+}
+
+section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.6rem;
+}
+
+p {
+  margin: 0.3rem 0;
+}
+
+form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.95rem;
+}
+
+button {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: var(--accent-weak);
+  color: var(--accent);
+  border-color: #b2dccf;
+}
+
+.pill {
+  display: inline-block;
+  background: var(--accent-weak);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.8rem;
+  margin-left: 0.4rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.card-button {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.25rem;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+}
+
+.card-button:disabled {
+  opacity: 0.65;
+}
+
+.trick-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.trick-card__player {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.playing-card-face {
+  width: 66px;
+  height: 92px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.28rem 0.34rem;
+  text-align: left;
+  box-shadow: inset 0 0 0 1px #ffffff, 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.playing-card-face--red {
+  color: #c62828;
+}
+
+.playing-card-face--black {
+  color: #1f2937;
+}
+
+.playing-card-face__corner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.playing-card-face__corner--bottom {
+  align-self: flex-end;
+  transform: rotate(180deg);
+}
+
+.playing-card-face__center {
+  align-self: center;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  padding: 0.35rem 0.25rem;
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.round-stats {
+  background: #f7fafc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem;
+}
+
+.round-info {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.55rem;
+  margin-bottom: 0.8rem;
+}
+
+.round-info__trump {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.round-info__trump-card {
+  display: inline-flex;
+}
+
+.round-stats__hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.round-stats__list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.round-stats__row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.5rem;
+}
+
+.round-stats__name {
+  margin: 0;
+  font-weight: 700;
+}
+
+.round-stats__meta {
+  margin: 0.2rem 0;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.round-stats__button {
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  padding: 1rem;
+}
+
+.modal-card {
+  width: min(940px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 0.9rem;
+}
+
+.modal-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.won-tricks {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.won-tricks__item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem;
+}
+
+.won-tricks__title {
+  margin: 0 0 0.35rem;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  main {
+    width: 96vw;
+  }
+
+  section {
+    padding: 0.85rem;
+  }
+
+  .game-layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "kachuful",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kachuful multiplayer monorepo",
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r --if-present test",
+    "test:engine": "pnpm --filter @kachuful/game-engine test",
+    "test:server": "pnpm --filter @kachuful/server test",
+    "test:web": "pnpm --filter @kachuful/web test",
+    "check": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
