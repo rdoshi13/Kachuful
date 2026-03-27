@@ -73,6 +73,7 @@ In 1-card rounds:
 - Reconnection support
 - Deterministic server-side rule enforcement
 - Low bandwidth usage
+- Persistent completed-match history across server restarts
 
 Because gameplay is turn-based, moderate network latency is acceptable.
 
@@ -94,7 +95,7 @@ Server validates intent, updates canonical state, and broadcasts the result.
 
 - Frontend: Next.js + React + Tailwind CSS
 - Backend: Node.js + Express + Socket.IO
-- State (MVP): in-memory room state
+- State (MVP): in-memory room/session state + persisted JSON match history
 - Future: Redis (distributed room state), Postgres (history/analytics)
 
 ## Core State Shape
@@ -178,3 +179,9 @@ Game should continue safely without desynchronization.
 4. Reconnection reliability
 
 If priorities conflict, prefer rule correctness over UI complexity.
+
+## Server Persistence (MVP)
+
+- Completed matches are written to a JSON file (default: `.data/match-history.json`).
+- Override path with `MATCH_HISTORY_FILE=/absolute/path/to/history.json`.
+- Read room history via `GET /rooms/:code/history`.

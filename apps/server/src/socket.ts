@@ -4,6 +4,7 @@ import { applyCommand, createGame, getPublicView } from "@kachuful/game-engine";
 import type { Command, RoomStatePayload } from "@kachuful/shared-types";
 import { log } from "./logger.js";
 import { createApp } from "./app.js";
+import { MatchHistoryStore } from "./history-store.js";
 import { RoomStore } from "./store.js";
 
 interface JoinEvent {
@@ -18,13 +19,20 @@ const emitGameError = (socket: Socket, message: string, code = "BAD_REQUEST"): v
 
 const roomPayload = (store: RoomStore, roomCode: string): RoomStatePayload => store.getRoomStatePayload(roomCode);
 
-export const createApiServer = (): {
+interface CreateApiServerOptions {
+  store?: RoomStore;
+  historyStore?: MatchHistoryStore;
+}
+
+export const createApiServer = (options: CreateApiServerOptions = {}): {
   store: RoomStore;
+  historyStore: MatchHistoryStore;
   httpServer: HttpServer;
   io: SocketIOServer;
 } => {
-  const store = new RoomStore();
-  const app = createApp(store);
+  const store = options.store ?? new RoomStore();
+  const historyStore = options.historyStore ?? new MatchHistoryStore();
+  const app = createApp(store, historyStore);
   const httpServer = createHttpServer(app);
   const io = new SocketIOServer(httpServer, {
     cors: { origin: "*" }
@@ -57,6 +65,7 @@ export const createApiServer = (): {
       emitGameError(socket, "Game has not started", "NO_ACTIVE_GAME");
       return;
     }
+    const wasComplete = room.gameState.phase === "game_complete";
 
     const result = applyCommand(room.gameState, command);
     if (!result.ok) {
@@ -71,7 +80,44 @@ export const createApiServer = (): {
     }
 
     store.setGameState(roomCode, result.state);
+    if (!wasComplete && result.state.phase === "game_complete") {
+      historyStore.recordCompletedGame(roomCode, result.state);
+    }
     broadcastGameState(roomCode);
+  };
+
+  const startRoomGame = (roomCode: string, hostPlayerId: string, socket: Socket): void => {
+    const room = store.getRoom(roomCode);
+    if (!room) {
+      emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+      return;
+    }
+    if (room.players.length < 2) {
+      emitGameError(socket, "At least 2 players required", "MIN_PLAYERS");
+      return;
+    }
+    if (room.gameState?.phase === "game_complete") {
+      historyStore.recordCompletedGame(roomCode, room.gameState);
+    }
+
+    const game = createGame({
+      gameId: room.roomCode,
+      players: room.players.map((player) => ({ playerId: player.playerId, name: player.name }))
+    });
+    const started = applyCommand(game, {
+      type: "start_game",
+      actorId: hostPlayerId
+    });
+
+    if (!started.ok) {
+      emitGameError(socket, started.error.message, started.error.code);
+      return;
+    }
+
+    store.setGameState(room.roomCode, started.state);
+    store.lockRoom(room.roomCode);
+    broadcastRoomState(room.roomCode);
+    broadcastGameState(room.roomCode);
   };
 
   io.on("connection", (socket) => {
@@ -128,29 +174,35 @@ export const createApiServer = (): {
         emitGameError(socket, "Only host can start game", "FORBIDDEN");
         return;
       }
-      if (room.players.length < 2) {
-        emitGameError(socket, "At least 2 players required", "MIN_PLAYERS");
+      startRoomGame(room.roomCode, identity.playerId, socket);
+    });
+
+    socket.on("game:restart", () => {
+      const identity = store.getIdentityBySocket(socket.id);
+      if (!identity) {
+        emitGameError(socket, "Join room first", "NOT_JOINED");
         return;
       }
 
-      const game = createGame({
-        gameId: room.roomCode,
-        players: room.players.map((player) => ({ playerId: player.playerId, name: player.name }))
-      });
-      const started = applyCommand(game, {
-        type: "start_game",
-        actorId: identity.playerId
-      });
-
-      if (!started.ok) {
-        emitGameError(socket, started.error.message, started.error.code);
+      const room = store.getRoom(identity.roomCode);
+      if (!room) {
+        emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+        return;
+      }
+      if (room.hostPlayerId !== identity.playerId) {
+        emitGameError(socket, "Only host can restart game", "FORBIDDEN");
+        return;
+      }
+      if (!room.gameState) {
+        emitGameError(socket, "No game to restart", "NO_ACTIVE_GAME");
+        return;
+      }
+      if (room.gameState.phase !== "game_complete") {
+        emitGameError(socket, "Game is not complete yet", "GAME_NOT_COMPLETE");
         return;
       }
 
-      store.setGameState(room.roomCode, started.state);
-      store.lockRoom(room.roomCode);
-      broadcastRoomState(room.roomCode);
-      broadcastGameState(room.roomCode);
+      startRoomGame(room.roomCode, identity.playerId, socket);
     });
 
     socket.on("bid:submit", (payload: { bid: number }) => {
@@ -210,5 +262,5 @@ export const createApiServer = (): {
     });
   });
 
-  return { store, httpServer, io };
+  return { store, historyStore, httpServer, io };
 };

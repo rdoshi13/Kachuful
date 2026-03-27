@@ -169,3 +169,23 @@ export interface RoomJoinResponse {
   playerId: string;
   sessionToken: string;
 }
+
+export interface MatchHistoryPlayerResult extends PlayerRef {
+  score: number;
+}
+
+export interface MatchHistoryEntry {
+  matchId: string;
+  roomCode: string;
+  startedAt: number | null;
+  completedAt: number;
+  roundsPlayed: number;
+  winnerPlayerIds: string[];
+  players: MatchHistoryPlayerResult[];
+  completedRounds: RoundSummary[];
+}
+
+export interface RoomHistoryResponse {
+  roomCode: string;
+  matches: MatchHistoryEntry[];
+}

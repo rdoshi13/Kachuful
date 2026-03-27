@@ -16,6 +16,12 @@ import { PlayingCard } from "./PlayingCard";
 const bidValues = (max: number): number[] =>
   Array.from({ length: max + 1 }, (_, index) => index);
 const TRUMP_SUIT_ORDER = ["S", "D", "C", "H"] as const;
+const TRUMP_SUIT_LABEL: Record<(typeof TRUMP_SUIT_ORDER)[number], string> = {
+  S: "Spades",
+  D: "Diamonds",
+  C: "Clubs",
+  H: "Hearts",
+};
 
 export function GameClient() {
   const [name, setName] = useState("");
@@ -26,6 +32,9 @@ export function GameClient() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [selectedWinnerPlayerId, setSelectedWinnerPlayerId] = useState<
+    string | null
+  >(null);
+  const [selectedSummaryPlayerId, setSelectedSummaryPlayerId] = useState<
     string | null
   >(null);
 
@@ -131,6 +140,7 @@ export function GameClient() {
     setRoomState(null);
     setGameState(null);
     setInfo(null);
+    setSelectedSummaryPlayerId(null);
   };
 
   const isHost = roomState?.hostPlayerId === session?.playerId;
@@ -176,6 +186,20 @@ export function GameClient() {
       score: gameState.scores[player.playerId] ?? 0,
     }));
   }, [gameState]);
+  const sortedFinalScores = useMemo(() => {
+    if (!gameState) {
+      return [];
+    }
+    return [...gameState.players]
+      .map((player) => ({
+        playerId: player.playerId,
+        name: player.name,
+        score: gameState.scores[player.playerId] ?? 0,
+      }))
+      .sort((a, b) => b.score - a.score);
+  }, [gameState]);
+  const winningScore = sortedFinalScores[0]?.score ?? 0;
+  const winners = sortedFinalScores.filter((entry) => entry.score === winningScore);
 
   const selectedPlayerWonTricks = useMemo(() => {
     if (!currentRound || !selectedWinnerPlayerId) {
@@ -193,6 +217,12 @@ export function GameClient() {
     return TRUMP_SUIT_ORDER[index];
   }, [gameState, visibleRoundNumber]);
   const trumpPreviewCardId = trumpSuit ? `A${trumpSuit}` : null;
+  const getTrumpSuitLabelForRoundIndex = (
+    roundIndex: number,
+  ): string => {
+    const suit = TRUMP_SUIT_ORDER[roundIndex % TRUMP_SUIT_ORDER.length] ?? "S";
+    return TRUMP_SUIT_LABEL[suit];
+  };
 
   if (!session) {
     return (
@@ -396,6 +426,82 @@ export function GameClient() {
                   ))}
                 </tbody>
               </table>
+
+              {gameState.phase === "game_complete" ? (
+                <div className="final-results">
+                  <h3>Game Complete</h3>
+                  <p className="final-results__winner">
+                    Winner{winners.length > 1 ? "s" : ""}:{" "}
+                    {winners.map((winner) => winner.name).join(", ")} ({winningScore} points)
+                  </p>
+                  {isHost ? (
+                    <button
+                      onClick={() => {
+                        socketRef.current?.emit("game:restart");
+                      }}
+                      type="button"
+                    >
+                      Start New Game
+                    </button>
+                  ) : null}
+
+                  <h4>Final Standings</h4>
+                  <table className="final-results__table">
+                    <thead>
+                      <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedFinalScores.map((entry, index) => (
+                        <tr key={`final-standings-${entry.playerId}`}>
+                          <td>{index + 1}</td>
+                          <td>{entry.name}</td>
+                          <td>{entry.score}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <h4>Round-by-Round Breakdown</h4>
+                  <table className="final-results__table">
+                    <thead>
+                      <tr>
+                        <th>Round</th>
+                        <th>Cards</th>
+                        <th>Trump</th>
+                        {gameState.players.map((player) => (
+                          <th key={`final-breakdown-header-${player.playerId}`}>
+                            {player.name}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gameState.completedRounds.map((round) => (
+                        <tr key={`final-breakdown-row-${round.roundIndex}`}>
+                          <td>{round.roundIndex + 1}</td>
+                          <td>{round.cardsPerPlayer}</td>
+                          <td>{getTrumpSuitLabelForRoundIndex(round.roundIndex)}</td>
+                          {gameState.players.map((player) => {
+                            const playerId = player.playerId;
+                            const bid = round.bids[playerId] ?? 0;
+                            const won = round.tricksWon[playerId] ?? 0;
+                            const points = round.scoreDelta[playerId] ?? 0;
+                            return (
+                              <td key={`final-breakdown-cell-${round.roundIndex}-${playerId}`}>
+                                {bid}/{won} ({points > 0 ? `+${points}` : points})
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </div>
 
             <aside className="round-stats">
@@ -446,6 +552,17 @@ export function GameClient() {
                           type="button"
                         >
                           Winning tricks ({wonCount})
+                        </button>
+                        <button
+                          aria-label={`View round summary for ${player.name}`}
+                          className="secondary round-stats__button"
+                          disabled={gameState.completedRounds.length === 0}
+                          onClick={() =>
+                            setSelectedSummaryPlayerId(player.playerId)
+                          }
+                          type="button"
+                        >
+                          Round summary
                         </button>
                       </div>
                     );
@@ -510,6 +627,64 @@ export function GameClient() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      ) : null}
+
+      {selectedSummaryPlayerId && gameState ? (
+        <div
+          className="modal-backdrop"
+          onClick={() => setSelectedSummaryPlayerId(null)}
+          role="presentation"
+        >
+          <div
+            aria-modal="true"
+            className="modal-card"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="modal-card__header">
+              <h3>
+                {getPlayerName(selectedSummaryPlayerId)} Round-by-Round Summary
+              </h3>
+              <button
+                className="secondary"
+                onClick={() => setSelectedSummaryPlayerId(null)}
+                type="button"
+              >
+                Close
+              </button>
+            </div>
+            <table className="summary-table">
+              <thead>
+                <tr>
+                  <th>Round</th>
+                  <th>Trump Suit</th>
+                  <th>Bid</th>
+                  <th>Won</th>
+                  <th>Result</th>
+                  <th>Round Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gameState.completedRounds.map((round) => {
+                  const bid = round.bids[selectedSummaryPlayerId] ?? 0;
+                  const won = round.tricksWon[selectedSummaryPlayerId] ?? 0;
+                  const points = round.scoreDelta[selectedSummaryPlayerId] ?? 0;
+                  const hit = bid === won;
+                  return (
+                    <tr key={`summary-${selectedSummaryPlayerId}-${round.roundIndex}`}>
+                      <td>{round.roundIndex + 1}</td>
+                      <td>{getTrumpSuitLabelForRoundIndex(round.roundIndex)}</td>
+                      <td>{bid}</td>
+                      <td>{won}</td>
+                      <td>{hit ? "Hit" : "Miss"}</td>
+                      <td>{points > 0 ? `+${points}` : `${points}`}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : null}

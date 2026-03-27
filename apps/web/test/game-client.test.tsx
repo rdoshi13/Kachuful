@@ -375,4 +375,136 @@ describe("GameClient", () => {
       await screen.findByLabelText("Trump preview AD"),
     ).toBeInTheDocument();
   });
+
+  it("opens per-player round summary on demand", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "bidding",
+      scores: { p1: 11, p2: 10 },
+      roundNumber: 2,
+      completedRounds: [
+        {
+          roundIndex: 0,
+          cardsPerPlayer: 1,
+          bids: { p1: 1, p2: 1 },
+          tricksWon: { p1: 1, p2: 0 },
+          scoreDelta: { p1: 11, p2: 0 },
+        },
+        {
+          roundIndex: 1,
+          cardsPerPlayer: 2,
+          bids: { p1: 0, p2: 1 },
+          tricksWon: { p1: 2, p2: 0 },
+          scoreDelta: { p1: 0, p2: 10 },
+        },
+      ],
+      currentRound: {
+        roundIndex: 2,
+        cardsPerPlayer: 3,
+        dealerIndex: 1,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: null, p2: null },
+        bidTurnPlayerId: "p1",
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p1",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 3, p2: 3 },
+        viewerHand: ["3H", "4C", "5S"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "View round summary for Host",
+      }),
+    );
+
+    expect(await screen.findByText("Host Round-by-Round Summary")).toBeInTheDocument();
+    expect(await screen.findByText("Round Points")).toBeInTheDocument();
+    expect(await screen.findByText("Spades")).toBeInTheDocument();
+    expect(await screen.findByText("Diamonds")).toBeInTheDocument();
+    expect(await screen.findByText("+11")).toBeInTheDocument();
+    expect(await screen.findByText("Miss")).toBeInTheDocument();
+  });
+
+  it("shows game complete panel with winners and round breakdown", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: true,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: true },
+      ],
+    });
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "game_complete",
+      scores: { p1: 33, p2: 10 },
+      roundNumber: 14,
+      completedRounds: [
+        {
+          roundIndex: 0,
+          cardsPerPlayer: 1,
+          bids: { p1: 1, p2: 0 },
+          tricksWon: { p1: 1, p2: 0 },
+          scoreDelta: { p1: 11, p2: 10 },
+        },
+      ],
+      currentRound: null,
+    });
+
+    expect(await screen.findByText("Game Complete")).toBeInTheDocument();
+    expect(await screen.findByText("Winner: Host (33 points)")).toBeInTheDocument();
+    expect(await screen.findByText("Final Standings")).toBeInTheDocument();
+    expect(await screen.findByText("Round-by-Round Breakdown")).toBeInTheDocument();
+    expect(await screen.findByText("Spades")).toBeInTheDocument();
+    expect(await screen.findByText("1/1 (+11)")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Start New Game" }));
+    const restartEvent = lastSocket?.emitted.find((entry) => entry.event === "game:restart");
+    expect(restartEvent).toBeTruthy();
+  });
 });

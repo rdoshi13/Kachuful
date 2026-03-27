@@ -295,6 +295,27 @@ td {
   font-weight: 700;
 }
 
+.summary-table {
+  margin-top: 0.35rem;
+}
+
+.final-results {
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 0.7rem;
+}
+
+.final-results__winner {
+  margin: 0.2rem 0 0.75rem;
+  font-weight: 700;
+}
+
+.final-results__table {
+  margin-top: 0.35rem;
+}
+
 @media (max-width: 720px) {
   main {
     width: 96vw;

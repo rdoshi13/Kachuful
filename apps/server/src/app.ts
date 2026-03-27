@@ -1,9 +1,10 @@
 import cors from "cors";
 import express from "express";
-import type { CreateRoomRequest, JoinRoomRequest } from "@kachuful/shared-types";
+import type { CreateRoomRequest, JoinRoomRequest, RoomHistoryResponse } from "@kachuful/shared-types";
+import { MatchHistoryStore } from "./history-store.js";
 import { RoomStore } from "./store.js";
 
-export const createApp = (store: RoomStore) => {
+export const createApp = (store: RoomStore, historyStore: MatchHistoryStore) => {
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -43,6 +44,21 @@ export const createApp = (store: RoomStore) => {
       }
       return res.status(400).json({ error: message });
     }
+  });
+
+  app.get("/rooms/:code/history", (req, res) => {
+    const roomCode = (req.params.code ?? "").toUpperCase();
+    if (!roomCode) {
+      return res.status(400).json({ error: "Room code is required" });
+    }
+
+    const rawLimit = Number(req.query.limit ?? 20);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.trunc(rawLimit), 1), 100) : 20;
+    const payload: RoomHistoryResponse = {
+      roomCode,
+      matches: historyStore.listRoomHistory(roomCode, limit)
+    };
+    return res.status(200).json(payload);
   });
 
   return app;

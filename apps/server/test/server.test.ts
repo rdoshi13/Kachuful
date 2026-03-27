@@ -1,8 +1,13 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { io as createClient, type Socket } from "socket.io-client";
 import type { PublicGameView, RoomJoinResponse, RoomStatePayload } from "@kachuful/shared-types";
+import { createGame } from "@kachuful/game-engine";
 import { createApiServer } from "../src/socket.js";
+import { MatchHistoryStore } from "../src/history-store.js";
 
 const waitForEvent = <T>(socket: Socket, event: string, timeoutMs = 2000): Promise<T> =>
   new Promise((resolve, reject) => {
@@ -29,9 +34,18 @@ describe("server integration", () => {
   let baseUrl = "";
   let sockets: Socket[] = [];
   let closeServer: (() => Promise<void>) | null = null;
+  let store: ReturnType<typeof createApiServer>["store"];
+  let historyTempDir = "";
+  let historyFilePath = "";
 
   beforeEach(async () => {
-    const { httpServer } = createApiServer();
+    historyTempDir = mkdtempSync(path.join(os.tmpdir(), "kachuful-history-"));
+    historyFilePath = path.join(historyTempDir, "history.json");
+    const server = createApiServer({
+      historyStore: new MatchHistoryStore({ filePath: historyFilePath })
+    });
+    const { httpServer } = server;
+    store = server.store;
     await new Promise<void>((resolve) => {
       httpServer.listen(0, () => resolve());
     });
@@ -73,6 +87,9 @@ describe("server integration", () => {
   afterEach(async () => {
     if (closeServer) {
       await closeServer();
+    }
+    if (historyTempDir) {
+      rmSync(historyTempDir, { recursive: true, force: true });
     }
   });
 
@@ -188,5 +205,206 @@ describe("server integration", () => {
     expect(roomStateAfterReconnect.players).toHaveLength(2);
     expect(roomStateAfterReconnect.players.filter((player) => player.playerId === guest.playerId)).toHaveLength(1);
     expect(Array.isArray(reconnectGameState.currentRound?.viewerHand ?? [])).toBe(true);
+  });
+
+  it("allows host to restart after game completion", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const room = store.getRoom(host.roomCode);
+    expect(room).not.toBeNull();
+    if (!room) {
+      throw new Error("Expected room to exist");
+    }
+
+    const ended = createGame({
+      gameId: room.roomCode,
+      players: room.players.map((player) => ({ playerId: player.playerId, name: player.name }))
+    });
+    store.setGameState(room.roomCode, {
+      ...ended,
+      phase: "game_complete",
+      roundNumber: 14,
+      currentRound: null
+    });
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+
+    await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    hostSocket.emit("game:restart");
+    const [hostRestartedState, guestRestartedState] = await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    expect(hostRestartedState.phase).toBe("bidding");
+    expect(hostRestartedState.roundNumber).toBe(0);
+    expect(guestRestartedState.phase).toBe("bidding");
+  });
+
+  it("rejects non-host restart attempts", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const room = store.getRoom(host.roomCode);
+    expect(room).not.toBeNull();
+    if (!room) {
+      throw new Error("Expected room to exist");
+    }
+
+    const ended = createGame({
+      gameId: room.roomCode,
+      players: room.players.map((player) => ({ playerId: player.playerId, name: player.name }))
+    });
+    store.setGameState(room.roomCode, {
+      ...ended,
+      phase: "game_complete",
+      roundNumber: 14,
+      currentRound: null
+    });
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+    await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    guestSocket.emit("game:restart");
+    const gameError = await waitForEvent<{ code: string; message: string }>(guestSocket, "game:error");
+    expect(gameError.code).toBe("FORBIDDEN");
+  });
+
+  it("persists completed match history and reloads it after server restart", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const room = store.getRoom(host.roomCode);
+    expect(room).not.toBeNull();
+    if (!room) {
+      throw new Error("Expected room to exist");
+    }
+
+    const ended = createGame({
+      gameId: room.roomCode,
+      players: room.players.map((player) => ({ playerId: player.playerId, name: player.name }))
+    });
+    store.setGameState(room.roomCode, {
+      ...ended,
+      phase: "game_complete",
+      roundNumber: 14,
+      startedAt: 1,
+      updatedAt: 200,
+      currentRound: null,
+      completedRounds: [{
+        roundIndex: 0,
+        cardsPerPlayer: 1,
+        bids: Object.fromEntries(room.players.map((player) => [player.playerId, 0])),
+        tricksWon: Object.fromEntries(room.players.map((player) => [player.playerId, 0])),
+        scoreDelta: Object.fromEntries(room.players.map((player) => [player.playerId, 10]))
+      }],
+      scores: Object.fromEntries(room.players.map((player, index) => [player.playerId, index === 0 ? 10 : 0]))
+    });
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+    await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    hostSocket.emit("game:restart");
+    await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    const historyBeforeRestart = await request(baseUrl).get(`/rooms/${host.roomCode}/history`).expect(200);
+    expect(historyBeforeRestart.body.matches).toHaveLength(1);
+    expect(historyBeforeRestart.body.matches[0]?.roomCode).toBe(host.roomCode);
+
+    if (closeServer) {
+      await closeServer();
+      closeServer = null;
+    }
+
+    const restartedServer = createApiServer({
+      historyStore: new MatchHistoryStore({ filePath: historyFilePath })
+    });
+    const { httpServer } = restartedServer;
+    store = restartedServer.store;
+    await new Promise<void>((resolve) => {
+      httpServer.listen(0, () => resolve());
+    });
+
+    const address = httpServer.address();
+    if (!address || typeof address === "string") {
+      throw new Error("Could not determine test server address after restart");
+    }
+    baseUrl = `http://127.0.0.1:${address.port}`;
+    closeServer = async () => {
+      await Promise.all(
+        sockets.map(
+          (socket) =>
+            new Promise<void>((resolve) => {
+              if (!socket.connected) {
+                resolve();
+                return;
+              }
+              socket.once("disconnect", () => resolve());
+              socket.disconnect();
+            })
+        )
+      );
+      sockets = [];
+
+      await new Promise<void>((resolve, reject) => {
+        httpServer.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+    };
+
+    const historyAfterRestart = await request(baseUrl).get(`/rooms/${host.roomCode}/history`).expect(200);
+    expect(historyAfterRestart.body.matches).toHaveLength(1);
+    expect(historyAfterRestart.body.matches[0]?.winnerPlayerIds).toContain(host.playerId);
   });
 });
