@@ -56,9 +56,15 @@ In 1-card rounds:
 - First player leads a card.
 - Players must follow suit if possible.
 - If unable to follow suit, any card may be played.
-- Highest card in the lead suit wins the trick.
+- If one or more trump cards are played, highest trump wins the trick.
+- If no trump card is played, highest card in the lead suit wins the trick.
 - Winner leads next trick.
-- Optional variant: trump suit support.
+
+### Trump Suit
+
+- Trump rotates each round in this fixed order:
+  `Spades -> Diamonds -> Clubs -> Hearts` and repeats.
+- Round 1 starts with Spades.
 
 ### Scoring
 

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { ROUND_PATTERN, type CardId, type Command, type GameState, type PlayerRef, type RoundState } from "@kachuful/shared-types";
+import {
+  ROUND_PATTERN,
+  TRUMP_SUIT_ORDER,
+  type CardId,
+  type Command,
+  type GameState,
+  type PlayerRef,
+  type RoundState
+} from "@kachuful/shared-types";
 import { applyCommand, createGame, getPublicView } from "../src/index.js";
 
 const players: PlayerRef[] = [
@@ -123,6 +131,7 @@ const autoplayToCompletion = (seed = 777): { finalState: GameState; commands: Co
 const controlledRound = (): RoundState => ({
   roundIndex: 0,
   cardsPerPlayer: 1,
+  trumpSuit: "S",
   dealerIndex: 0,
   blind: false,
   cardsDealt: true,
@@ -142,6 +151,13 @@ describe("game engine", () => {
     const { finalState } = autoplayToCompletion(1337);
     const sequence = finalState.completedRounds.map((round) => round.cardsPerPlayer);
     expect(sequence).toEqual([...ROUND_PATTERN]);
+  });
+
+  it("assigns trump suit in S->D->C->H order by round", () => {
+    const { finalState } = autoplayToCompletion(1337);
+    const trumpSequence = finalState.completedRounds.map((round) => round.trumpSuit);
+    const expected = ROUND_PATTERN.map((_, roundIndex) => TRUMP_SUIT_ORDER[roundIndex % TRUMP_SUIT_ORDER.length]);
+    expect(trumpSequence).toEqual(expected);
   });
 
   it("enforces compulsory dealer bid restriction", () => {
@@ -204,8 +220,43 @@ describe("game engine", () => {
     }
   });
 
-  it("resolves trick winner by highest lead suit", () => {
+  it("resolves trick winner by highest lead suit when no trump is played", () => {
     const state = createGame({ gameId: "g-trick", players, seed: 5 });
+    const customState: GameState = {
+      ...state,
+      phase: "trick_play",
+      roundNumber: 0,
+      currentRound: {
+        ...controlledRound(),
+        hands: {
+          p1: [],
+          p2: ["KH"],
+          p3: ["3D"]
+        },
+        bids: { p1: 0, p2: 1, p3: 0 },
+        currentTrick: [{ playerId: "p1", cardId: "2H" }],
+        turnPlayerId: "p2"
+      }
+    };
+
+    const afterP2 = expectOk(customState, {
+      type: "play_card",
+      actorId: "p2",
+      cardId: "KH"
+    });
+
+    const afterP3 = expectOk(afterP2, {
+      type: "play_card",
+      actorId: "p3",
+      cardId: "3D"
+    });
+
+    const summary = afterP3.completedRounds[0];
+    expect(summary?.tricksWon.p2).toBe(1);
+  });
+
+  it("lets trump beat higher lead-suit cards", () => {
+    const state = createGame({ gameId: "g-trump", players, seed: 5 });
     const customState: GameState = {
       ...state,
       phase: "trick_play",
@@ -217,8 +268,8 @@ describe("game engine", () => {
           p2: ["KH"],
           p3: ["3S"]
         },
-        bids: { p1: 0, p2: 1, p3: 0 },
-        currentTrick: [{ playerId: "p1", cardId: "2H" }],
+        bids: { p1: 0, p2: 0, p3: 1 },
+        currentTrick: [{ playerId: "p1", cardId: "AH" }],
         turnPlayerId: "p2"
       }
     };
@@ -236,7 +287,42 @@ describe("game engine", () => {
     });
 
     const summary = afterP3.completedRounds[0];
-    expect(summary?.tricksWon.p2).toBe(1);
+    expect(summary?.tricksWon.p3).toBe(1);
+  });
+
+  it("resolves between trump cards by highest trump rank", () => {
+    const state = createGame({ gameId: "g-trump-high", players, seed: 5 });
+    const customState: GameState = {
+      ...state,
+      phase: "trick_play",
+      roundNumber: 0,
+      currentRound: {
+        ...controlledRound(),
+        hands: {
+          p1: [],
+          p2: ["3S"],
+          p3: ["AS"]
+        },
+        bids: { p1: 0, p2: 0, p3: 1 },
+        currentTrick: [{ playerId: "p1", cardId: "2H" }],
+        turnPlayerId: "p2"
+      }
+    };
+
+    const afterP2 = expectOk(customState, {
+      type: "play_card",
+      actorId: "p2",
+      cardId: "3S"
+    });
+
+    const afterP3 = expectOk(afterP2, {
+      type: "play_card",
+      actorId: "p3",
+      cardId: "AS"
+    });
+
+    const summary = afterP3.completedRounds[0];
+    expect(summary?.tricksWon.p3).toBe(1);
   });
 
   it("is deterministic for identical command streams", () => {

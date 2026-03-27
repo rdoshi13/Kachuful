@@ -1,4 +1,5 @@
 export const ROUND_PATTERN = [1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1] as const;
+export const TRUMP_SUIT_ORDER = ["S", "D", "C", "H"] as const;
 
 export type Suit = "C" | "D" | "H" | "S";
 export type Rank =
@@ -45,6 +46,7 @@ export interface TrickResult {
 export interface RoundState {
   roundIndex: number;
   cardsPerPlayer: number;
+  trumpSuit: Suit;
   dealerIndex: number;
   blind: boolean;
   cardsDealt: boolean;
@@ -62,6 +64,7 @@ export interface RoundState {
 export interface RoundSummary {
   roundIndex: number;
   cardsPerPlayer: number;
+  trumpSuit: Suit;
   bids: Record<string, number>;
   tricksWon: Record<string, number>;
   scoreDelta: Record<string, number>;
@@ -118,6 +121,7 @@ export type EngineResult =
 export interface PublicRoundState {
   roundIndex: number;
   cardsPerPlayer: number;
+  trumpSuit: Suit;
   dealerIndex: number;
   blind: boolean;
   cardsDealt: boolean;

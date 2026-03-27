@@ -34,6 +34,7 @@ const isValidRoundSummary = (value: unknown): value is RoundSummary => {
   return (
     typeof value.roundIndex === "number"
     && typeof value.cardsPerPlayer === "number"
+    && ["C", "D", "H", "S"].includes(String(value.trumpSuit))
     && isNumericRecord(value.bids)
     && isNumericRecord(value.tricksWon)
     && isNumericRecord(value.scoreDelta)
@@ -73,6 +74,7 @@ const isValidMatchHistoryEntry = (value: unknown): value is MatchHistoryEntry =>
 const cloneRoundSummary = (summary: RoundSummary): RoundSummary => ({
   roundIndex: summary.roundIndex,
   cardsPerPlayer: summary.cardsPerPlayer,
+  trumpSuit: summary.trumpSuit,
   bids: { ...summary.bids },
   tricksWon: { ...summary.tricksWon },
   scoreDelta: { ...summary.scoreDelta }

@@ -1,5 +1,6 @@
 import {
   ROUND_PATTERN,
+  TRUMP_SUIT_ORDER,
   type CardId,
   type Command,
   type EngineError,
@@ -65,6 +66,8 @@ const getForbiddenDealerBid = (
   return round.cardsPerPlayer - sum;
 };
 
+const getRoundTrumpSuit = (roundIndex: number): Suit => TRUMP_SUIT_ORDER[roundIndex % TRUMP_SUIT_ORDER.length]!;
+
 const buildRound = (state: GameState, roundIndex: number): { state: GameState; event: EngineEvent } => {
   const cardsPerPlayer = ROUND_PATTERN[roundIndex];
   if (!cardsPerPlayer) {
@@ -78,6 +81,7 @@ const buildRound = (state: GameState, roundIndex: number): { state: GameState; e
   const round: RoundState = {
     roundIndex,
     cardsPerPlayer,
+    trumpSuit: getRoundTrumpSuit(roundIndex),
     dealerIndex,
     blind,
     cardsDealt: !blind,
@@ -147,6 +151,7 @@ const completeRound = (state: GameState): { state: GameState; events: EngineEven
   const summary: RoundSummary = {
     roundIndex: round.roundIndex,
     cardsPerPlayer: round.cardsPerPlayer,
+    trumpSuit: round.trumpSuit,
     bids,
     tricksWon: { ...round.tricksWon },
     scoreDelta
@@ -209,22 +214,27 @@ const dealBlindHands = (state: GameState): GameState => {
   return { ...state, currentRound: nextRound, updatedAt: state.updatedAt + 1 };
 };
 
-const resolveTrickWinner = (trick: TrickPlay[]): { winnerId: string; leadSuit: Suit } => {
+const resolveTrickWinner = (
+  trick: TrickPlay[],
+  trumpSuit: Suit
+): { winnerId: string; leadSuit: Suit } => {
   const leadSuit = getCardSuit(trick[0]!.cardId);
 
   let winner = trick[0]!;
+  let winnerSuit = getCardSuit(winner.cardId);
   let winnerRank = getCardRank(winner.cardId);
+  let winnerStrength = winnerSuit === trumpSuit ? 2 : winnerSuit === leadSuit ? 1 : 0;
 
   for (let index = 1; index < trick.length; index += 1) {
     const current = trick[index]!;
-    const suit = getCardSuit(current.cardId);
-    if (suit !== leadSuit) {
-      continue;
-    }
-    const rank = getCardRank(current.cardId);
-    if (rank > winnerRank) {
+    const currentSuit = getCardSuit(current.cardId);
+    const currentRank = getCardRank(current.cardId);
+    const currentStrength = currentSuit === trumpSuit ? 2 : currentSuit === leadSuit ? 1 : 0;
+    if (currentStrength > winnerStrength || (currentStrength === winnerStrength && currentRank > winnerRank)) {
       winner = current;
-      winnerRank = rank;
+      winnerSuit = currentSuit;
+      winnerRank = currentRank;
+      winnerStrength = currentStrength;
     }
   }
 
@@ -398,7 +408,7 @@ export const applyCommand = (state: GameState, command: Command): EngineResult =
     }
 
     const trick = [...nextRound.currentTrick];
-    const resolved = resolveTrickWinner(trick);
+    const resolved = resolveTrickWinner(trick, nextRound.trumpSuit);
     const trickResult: TrickResult = {
       winnerId: resolved.winnerId,
       leadSuit: resolved.leadSuit,
@@ -439,6 +449,7 @@ export const getPublicView = (state: GameState, viewerPlayerId: string): PublicG
     ? {
         roundIndex: round.roundIndex,
         cardsPerPlayer: round.cardsPerPlayer,
+        trumpSuit: round.trumpSuit,
         dealerIndex: round.dealerIndex,
         blind: round.blind,
         cardsDealt: round.cardsDealt,

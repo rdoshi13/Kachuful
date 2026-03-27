@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { PublicGameView, RoomStatePayload } from "@kachuful/shared-types";
+import type { PublicGameView, RoomStatePayload, Suit } from "@kachuful/shared-types";
 import type { Socket } from "socket.io-client";
 import { createRoom, joinRoom } from "../lib/api";
 import {
@@ -15,8 +15,7 @@ import { PlayingCard } from "./PlayingCard";
 
 const bidValues = (max: number): number[] =>
   Array.from({ length: max + 1 }, (_, index) => index);
-const TRUMP_SUIT_ORDER = ["S", "D", "C", "H"] as const;
-const TRUMP_SUIT_LABEL: Record<(typeof TRUMP_SUIT_ORDER)[number], string> = {
+const TRUMP_SUIT_LABEL: Record<Suit, string> = {
   S: "Spades",
   D: "Diamonds",
   C: "Clubs",
@@ -209,20 +208,9 @@ export function GameClient() {
       .map((trick, index) => ({ ...trick, trickNumber: index + 1 }))
       .filter((trick) => trick.winnerId === selectedWinnerPlayerId);
   }, [currentRound, selectedWinnerPlayerId]);
-  const trumpSuit = useMemo(() => {
-    if (!gameState || visibleRoundNumber <= 0) {
-      return null;
-    }
-    const index = (visibleRoundNumber - 1) % TRUMP_SUIT_ORDER.length;
-    return TRUMP_SUIT_ORDER[index];
-  }, [gameState, visibleRoundNumber]);
+  const trumpSuit = currentRound?.trumpSuit ?? null;
   const trumpPreviewCardId = trumpSuit ? `A${trumpSuit}` : null;
-  const getTrumpSuitLabelForRoundIndex = (
-    roundIndex: number,
-  ): string => {
-    const suit = TRUMP_SUIT_ORDER[roundIndex % TRUMP_SUIT_ORDER.length] ?? "S";
-    return TRUMP_SUIT_LABEL[suit];
-  };
+  const getTrumpSuitLabel = (suit: Suit): string => TRUMP_SUIT_LABEL[suit];
 
   if (!session) {
     return (
@@ -484,7 +472,7 @@ export function GameClient() {
                         <tr key={`final-breakdown-row-${round.roundIndex}`}>
                           <td>{round.roundIndex + 1}</td>
                           <td>{round.cardsPerPlayer}</td>
-                          <td>{getTrumpSuitLabelForRoundIndex(round.roundIndex)}</td>
+                          <td>{getTrumpSuitLabel(round.trumpSuit)}</td>
                           {gameState.players.map((player) => {
                             const playerId = player.playerId;
                             const bid = round.bids[playerId] ?? 0;
@@ -510,6 +498,10 @@ export function GameClient() {
                 <p className="round-stats__meta">
                   No. of cards:{" "}
                   <strong>{currentRound?.cardsPerPlayer ?? "-"}</strong>
+                </p>
+                <p className="round-stats__meta">
+                  Trump:{" "}
+                  <strong>{trumpSuit ? getTrumpSuitLabel(trumpSuit) : "-"}</strong>
                 </p>
                 <div className="round-info__trump">
                   {trumpPreviewCardId ? (
@@ -675,7 +667,7 @@ export function GameClient() {
                   return (
                     <tr key={`summary-${selectedSummaryPlayerId}-${round.roundIndex}`}>
                       <td>{round.roundIndex + 1}</td>
-                      <td>{getTrumpSuitLabelForRoundIndex(round.roundIndex)}</td>
+                      <td>{getTrumpSuitLabel(round.trumpSuit)}</td>
                       <td>{bid}</td>
                       <td>{won}</td>
                       <td>{hit ? "Hit" : "Miss"}</td>

@@ -329,6 +329,7 @@ describe("server integration", () => {
       completedRounds: [{
         roundIndex: 0,
         cardsPerPlayer: 1,
+        trumpSuit: "S",
         bids: Object.fromEntries(room.players.map((player) => [player.playerId, 0])),
         tricksWon: Object.fromEntries(room.players.map((player) => [player.playerId, 0])),
         scoreDelta: Object.fromEntries(room.players.map((player) => [player.playerId, 10]))

@@ -132,6 +132,7 @@ describe("GameClient", () => {
       currentRound: {
         roundIndex: 0,
         cardsPerPlayer: 1,
+        trumpSuit: "S",
         dealerIndex: 0,
         blind: true,
         cardsDealt: false,
@@ -182,6 +183,7 @@ describe("GameClient", () => {
       currentRound: {
         roundIndex: 0,
         cardsPerPlayer: 1,
+        trumpSuit: "S",
         dealerIndex: 0,
         blind: false,
         cardsDealt: true,
@@ -232,6 +234,7 @@ describe("GameClient", () => {
       currentRound: {
         roundIndex: 1,
         cardsPerPlayer: 2,
+        trumpSuit: "D",
         dealerIndex: 1,
         blind: false,
         cardsDealt: true,
@@ -282,6 +285,7 @@ describe("GameClient", () => {
       currentRound: {
         roundIndex: 1,
         cardsPerPlayer: 2,
+        trumpSuit: "D",
         dealerIndex: 1,
         blind: false,
         cardsDealt: true,
@@ -323,7 +327,7 @@ describe("GameClient", () => {
     expect(await screen.findByText("Trick 1")).toBeInTheDocument();
   });
 
-  it("shows frontend trump preview and cards-per-round info", async () => {
+  it("shows trump suit label, trump preview, and cards-per-round info", async () => {
     localStorage.setItem(
       "kachuful:session",
       JSON.stringify({
@@ -352,6 +356,7 @@ describe("GameClient", () => {
       currentRound: {
         roundIndex: 1,
         cardsPerPlayer: 2,
+        trumpSuit: "D",
         dealerIndex: 1,
         blind: false,
         cardsDealt: true,
@@ -371,6 +376,8 @@ describe("GameClient", () => {
 
     expect(await screen.findByText("Round Info")).toBeInTheDocument();
     expect(await screen.findByText("No. of cards:")).toBeInTheDocument();
+    expect(await screen.findByText("Trump:")).toBeInTheDocument();
+    expect(await screen.findByText("Diamonds")).toBeInTheDocument();
     expect(
       await screen.findByLabelText("Trump preview AD"),
     ).toBeInTheDocument();
@@ -405,6 +412,7 @@ describe("GameClient", () => {
         {
           roundIndex: 0,
           cardsPerPlayer: 1,
+          trumpSuit: "S",
           bids: { p1: 1, p2: 1 },
           tricksWon: { p1: 1, p2: 0 },
           scoreDelta: { p1: 11, p2: 0 },
@@ -412,6 +420,7 @@ describe("GameClient", () => {
         {
           roundIndex: 1,
           cardsPerPlayer: 2,
+          trumpSuit: "D",
           bids: { p1: 0, p2: 1 },
           tricksWon: { p1: 2, p2: 0 },
           scoreDelta: { p1: 0, p2: 10 },
@@ -420,6 +429,7 @@ describe("GameClient", () => {
       currentRound: {
         roundIndex: 2,
         cardsPerPlayer: 3,
+        trumpSuit: "C",
         dealerIndex: 1,
         blind: false,
         cardsDealt: true,
@@ -489,6 +499,7 @@ describe("GameClient", () => {
         {
           roundIndex: 0,
           cardsPerPlayer: 1,
+          trumpSuit: "S",
           bids: { p1: 1, p2: 0 },
           tricksWon: { p1: 1, p2: 0 },
           scoreDelta: { p1: 11, p2: 10 },
