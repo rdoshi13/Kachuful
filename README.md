@@ -192,11 +192,12 @@ If priorities conflict, prefer rule correctness over UI complexity.
 - Override path with `MATCH_HISTORY_FILE=/absolute/path/to/history.json`.
 - Read room history via `GET /rooms/:code/history`.
 
-## Cloudflare Backend (In Progress)
+## Cloudflare Deployment
 
 - Worker package path: `apps/cloudflare-server`
 - Uses a Durable Object (`GameHub`) for authoritative room/game coordination.
 - HTTP endpoints:
+  - `GET /` (serves frontend)
   - `GET /health`
   - `POST /rooms`
   - `POST /rooms/:code/join`
@@ -204,21 +205,32 @@ If priorities conflict, prefer rule correctness over UI complexity.
 - WebSocket endpoint:
   - `GET /ws` with message envelope `{ event, payload }`
 
-### Deploy Commands
+### One-Time GitHub Setup (Auto Deploy)
 
-From repository root:
+1. Add repository secret `CLOUDFLARE_API_TOKEN`
+2. Add repository secret `CLOUDFLARE_ACCOUNT_ID`
+   - Current account id: `03fa06c1334ae6ef4fd3aff628ba23a0`
+3. Push to `main`
+   - Workflow path: `.github/workflows/deploy-cloudflare.yml`
+   - Trigger: every push to `main` (and manual dispatch)
+
+### Manual Deploy (Fallback)
+
+Build frontend with backend URL baked in:
 
 ```bash
-pnpm --filter @kachuful/cloudflare-server deploy
+NEXT_PUBLIC_API_BASE=https://kachuful-server.<your-subdomain>.workers.dev \
+NEXT_PUBLIC_SOCKET_URL=https://kachuful-server.<your-subdomain>.workers.dev \
+pnpm --filter @kachuful/web build
 ```
 
-### Web App Environment (for Cloudflare backend)
-
-Set in web environment:
+Deploy API + frontend assets to `kachuful-server`:
 
 ```bash
-NEXT_PUBLIC_API_BASE=https://<your-worker>.workers.dev
-NEXT_PUBLIC_SOCKET_URL=https://<your-worker>.workers.dev
+pnpm --filter @kachuful/cloudflare-server exec wrangler deploy \
+  --name kachuful-server \
+  --compatibility-date 2026-03-27 \
+  --assets ../web/out
 ```
 
-`NEXT_PUBLIC_SOCKET_URL` can stay as HTTPS; client converts to WSS and appends `/ws`.
+`NEXT_PUBLIC_SOCKET_URL` can stay as HTTPS. Client converts to WSS and appends `/ws`.
