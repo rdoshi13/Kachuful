@@ -19,17 +19,18 @@ import { PlayingCard } from "./PlayingCard";
 
 const bidValues = (max: number): number[] =>
   Array.from({ length: max + 1 }, (_, index) => index);
-const TRICK_REVEAL_DURATION_MS = 1000;
+const TRICK_REVEAL_DURATION_MS = 2000;
 const TRUMP_SUIT_LABEL: Record<Suit, string> = {
   S: "Spades",
   D: "Diamonds",
   C: "Clubs",
   H: "Hearts",
 };
-const PHASE_LABEL_OVERRIDES: Partial<Record<PublicGameView["phase"], string>> = {
-  bidding: "Bidding",
-  trick_play: "Play",
-};
+const PHASE_LABEL_OVERRIDES: Partial<Record<PublicGameView["phase"], string>> =
+  {
+    bidding: "Bidding",
+    trick_play: "Play",
+  };
 const BASE_HAND_SUIT_ORDER: Suit[] = ["S", "H", "C", "D"];
 const RANK_VALUE: Record<string, number> = {
   "2": 2,
@@ -55,7 +56,8 @@ const sortHandCards = (cardIds: string[], trumpSuit: Suit | null): string[] => {
   return [...cardIds].sort((left, right) => {
     const leftSuit = left.slice(-1) as Suit;
     const rightSuit = right.slice(-1) as Suit;
-    const suitOrderDelta = suitOrder.indexOf(leftSuit) - suitOrder.indexOf(rightSuit);
+    const suitOrderDelta =
+      suitOrder.indexOf(leftSuit) - suitOrder.indexOf(rightSuit);
     if (suitOrderDelta !== 0) {
       return suitOrderDelta;
     }
@@ -70,8 +72,8 @@ const toTitleCase = (value: string): string =>
   value.slice(0, 1).toUpperCase() + value.slice(1);
 
 const getPhaseLabel = (phase: PublicGameView["phase"]): string =>
-  PHASE_LABEL_OVERRIDES[phase]
-  ?? phase
+  PHASE_LABEL_OVERRIDES[phase] ??
+  phase
     .split("_")
     .map((segment) => toTitleCase(segment))
     .join(" ");
@@ -82,7 +84,9 @@ interface TrickRevealState {
 }
 
 const asObject = (value: unknown): Record<string, unknown> | null =>
-  typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
+  typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : null;
 
 const parseTrickRevealPayload = (value: unknown): TrickRevealState | null => {
   const payload = asObject(value);
@@ -131,12 +135,13 @@ export function GameClient() {
     string | null
   >(null);
   const [isHandOrdered, setIsHandOrdered] = useState(false);
-  const [revealedCompletedTrick, setRevealedCompletedTrick] = useState<
-    TrickRevealState | null
-  >(null);
+  const [revealedCompletedTrick, setRevealedCompletedTrick] =
+    useState<TrickRevealState | null>(null);
 
   const socketRef = useRef<GameSocket | null>(null);
-  const trickRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trickRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const clearTrickRevealTimeout = () => {
     if (!trickRevealTimeoutRef.current) {
@@ -333,7 +338,9 @@ export function GameClient() {
       .sort((a, b) => b.score - a.score);
   }, [gameState]);
   const winningScore = sortedFinalScores[0]?.score ?? 0;
-  const winners = sortedFinalScores.filter((entry) => entry.score === winningScore);
+  const winners = sortedFinalScores.filter(
+    (entry) => entry.score === winningScore,
+  );
 
   const selectedPlayerWonTricks = useMemo(() => {
     if (!currentRound || !selectedWinnerPlayerId) {
@@ -497,7 +504,9 @@ export function GameClient() {
                     </p>
                   ) : null}
                   <div>
-                    <p>{isTrickRevealActive ? "Last trick" : "Current trick"}</p>
+                    <p>
+                      {isTrickRevealActive ? "Last trick" : "Current trick"}
+                    </p>
                     <div className="cards">
                       {displayTrickCards.map((play) => (
                         <span
@@ -580,7 +589,8 @@ export function GameClient() {
                   <h3>Game Complete</h3>
                   <p className="final-results__winner">
                     Winner{winners.length > 1 ? "s" : ""}:{" "}
-                    {winners.map((winner) => winner.name).join(", ")} ({winningScore} points)
+                    {winners.map((winner) => winner.name).join(", ")} (
+                    {winningScore} points)
                   </p>
                   {isHost ? (
                     <button
@@ -639,8 +649,11 @@ export function GameClient() {
                             const won = round.tricksWon[playerId] ?? 0;
                             const points = round.scoreDelta[playerId] ?? 0;
                             return (
-                              <td key={`final-breakdown-cell-${round.roundIndex}-${playerId}`}>
-                                {bid}/{won} ({points > 0 ? `+${points}` : points})
+                              <td
+                                key={`final-breakdown-cell-${round.roundIndex}-${playerId}`}
+                              >
+                                {bid}/{won} (
+                                {points > 0 ? `+${points}` : points})
                               </td>
                             );
                           })}
@@ -661,7 +674,9 @@ export function GameClient() {
                 </p>
                 <p className="round-stats__meta">
                   Trump:{" "}
-                  <strong>{trumpSuit ? getTrumpSuitLabel(trumpSuit) : "-"}</strong>
+                  <strong>
+                    {trumpSuit ? getTrumpSuitLabel(trumpSuit) : "-"}
+                  </strong>
                 </p>
                 <div className="round-info__trump">
                   {trumpPreviewCardId ? (
@@ -829,7 +844,9 @@ export function GameClient() {
                   const points = round.scoreDelta[selectedSummaryPlayerId] ?? 0;
                   const hit = bid === won;
                   return (
-                    <tr key={`summary-${selectedSummaryPlayerId}-${round.roundIndex}`}>
+                    <tr
+                      key={`summary-${selectedSummaryPlayerId}-${round.roundIndex}`}
+                    >
                       <td>{round.roundIndex + 1}</td>
                       <td>{getTrumpSuitLabel(round.trumpSuit)}</td>
                       <td>{bid}</td>
