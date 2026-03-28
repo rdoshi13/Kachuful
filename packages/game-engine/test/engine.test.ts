@@ -160,6 +160,26 @@ describe("game engine", () => {
     expect(trumpSequence).toEqual(expected);
   });
 
+  it("uses a 48-card short deck without twos for 6-player games", () => {
+    const sixPlayers: PlayerRef[] = [
+      { playerId: "p1", name: "A" },
+      { playerId: "p2", name: "B" },
+      { playerId: "p3", name: "C" },
+      { playerId: "p4", name: "D" },
+      { playerId: "p5", name: "E" },
+      { playerId: "p6", name: "F" }
+    ];
+
+    const started = expectOk(
+      createGame({ gameId: "g-six", players: sixPlayers, seed: 17 }),
+      { type: "start_game", actorId: "p1" }
+    );
+
+    const drawPile = started.currentRound?.drawPile ?? [];
+    expect(drawPile).toHaveLength(48);
+    expect(drawPile.every((cardId) => !cardId.startsWith("2"))).toBe(true);
+  });
+
   it("enforces compulsory dealer bid restriction", () => {
     let state = startGame(101);
 

@@ -192,6 +192,27 @@ td {
   align-items: start;
 }
 
+.game-main {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.hand-section {
+  margin-bottom: 0.35rem;
+}
+
+.hand-section__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+}
+
+.hand-section__header p {
+  margin: 0;
+}
+
 .round-stats {
   background: #f7fafc;
   border: 1px solid var(--border);

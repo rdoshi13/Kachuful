@@ -20,6 +20,41 @@ const TRUMP_SUIT_LABEL: Record<Suit, string> = {
   C: "Clubs",
   H: "Hearts",
 };
+const BASE_HAND_SUIT_ORDER: Suit[] = ["S", "H", "C", "D"];
+const RANK_VALUE: Record<string, number> = {
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+  "6": 6,
+  "7": 7,
+  "8": 8,
+  "9": 9,
+  T: 10,
+  J: 11,
+  Q: 12,
+  K: 13,
+  A: 14,
+};
+
+const sortHandCards = (cardIds: string[], trumpSuit: Suit | null): string[] => {
+  const suitOrder = trumpSuit
+    ? [trumpSuit, ...BASE_HAND_SUIT_ORDER.filter((suit) => suit !== trumpSuit)]
+    : BASE_HAND_SUIT_ORDER;
+
+  return [...cardIds].sort((left, right) => {
+    const leftSuit = left.slice(-1) as Suit;
+    const rightSuit = right.slice(-1) as Suit;
+    const suitOrderDelta = suitOrder.indexOf(leftSuit) - suitOrder.indexOf(rightSuit);
+    if (suitOrderDelta !== 0) {
+      return suitOrderDelta;
+    }
+
+    const leftRank = RANK_VALUE[left.slice(0, -1)] ?? 0;
+    const rightRank = RANK_VALUE[right.slice(0, -1)] ?? 0;
+    return rightRank - leftRank;
+  });
+};
 
 export function GameClient() {
   const [name, setName] = useState("");
@@ -35,6 +70,7 @@ export function GameClient() {
   const [selectedSummaryPlayerId, setSelectedSummaryPlayerId] = useState<
     string | null
   >(null);
+  const [isHandOrdered, setIsHandOrdered] = useState(false);
 
   const socketRef = useRef<GameSocket | null>(null);
 
@@ -215,6 +251,15 @@ export function GameClient() {
   const trumpSuit = currentRound?.trumpSuit ?? null;
   const trumpPreviewCardId = trumpSuit ? `A${trumpSuit}` : null;
   const getTrumpSuitLabel = (suit: Suit): string => TRUMP_SUIT_LABEL[suit];
+  const visibleHandCards = useMemo(() => {
+    if (!handRound) {
+      return [];
+    }
+    if (!isHandOrdered) {
+      return handRound.viewerHand;
+    }
+    return sortHandCards(handRound.viewerHand, handRound.trumpSuit);
+  }, [handRound, isHandOrdered]);
 
   if (!session) {
     return (
@@ -307,14 +352,13 @@ export function GameClient() {
       {gameState ? (
         <section>
           <div className="game-layout">
-            <div>
+            <div className="game-main">
               <h2>Game</h2>
               <p>Phase: {gameState.phase}</p>
               <p>Round: {visibleRoundNumber}</p>
 
               {bidding ? (
                 <div>
-                  <h3>Bidding</h3>
                   <p>
                     Turn:{" "}
                     {bidding.bidTurnPlayerId
@@ -374,10 +418,19 @@ export function GameClient() {
               ) : null}
 
               {handRound ? (
-                <div>
-                  <p>Your hand</p>
+                <div className="hand-section">
+                  <div className="hand-section__header">
+                    <p>Your hand</p>
+                    <button
+                      className="secondary"
+                      onClick={() => setIsHandOrdered(true)}
+                      type="button"
+                    >
+                      Order hand
+                    </button>
+                  </div>
                   <div className="cards">
-                    {handRound.viewerHand.map((cardId) => {
+                    {visibleHandCards.map((cardId) => {
                       const canPlay = Boolean(
                         trickPlay &&
                         isPlayTurn &&

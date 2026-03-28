@@ -2,6 +2,7 @@ import type { CardId, Rank, Suit } from "@kachuful/shared-types";
 
 const SUITS: Suit[] = ["C", "D", "H", "S"];
 const RANKS: Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+const SHORT_DECK_RANKS: Rank[] = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
 const SYMBOL_TO_RANK: Record<string, Rank> = {
   "2": 2,
@@ -37,10 +38,11 @@ const RANK_TO_SYMBOL: Record<Rank, string> = {
 
 export const createCardId = (rank: Rank, suit: Suit): CardId => `${RANK_TO_SYMBOL[rank]}${suit}`;
 
-export const getDeck = (): CardId[] => {
+export const getDeck = (options?: { playerCount?: number }): CardId[] => {
+  const ranks = options?.playerCount === 6 ? SHORT_DECK_RANKS : RANKS;
   const deck: CardId[] = [];
   for (const suit of SUITS) {
-    for (const rank of RANKS) {
+    for (const rank of ranks) {
       deck.push(createCardId(rank, suit));
     }
   }

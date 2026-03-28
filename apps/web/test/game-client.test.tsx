@@ -294,6 +294,68 @@ describe("GameClient", () => {
     expect(await screen.findByRole("button", { name: "4C" })).toBeDisabled();
   });
 
+  it("orders hand with trump-first suit grouping when requested", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "bidding",
+      scores: { p1: 0, p2: 0 },
+      roundNumber: 1,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 1,
+        cardsPerPlayer: 5,
+        trumpSuit: "D",
+        dealerIndex: 1,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: null, p2: null },
+        bidTurnPlayerId: "p1",
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p1",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 5, p2: 5 },
+        viewerHand: ["3C", "2D", "5S", "KH", "AD"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    await screen.findByRole("button", { name: "3C" });
+
+    const initialOrder = Array.from(document.querySelectorAll("button.card-button")).map(
+      (element) => element.getAttribute("aria-label"),
+    );
+    expect(initialOrder).toEqual(["3C", "2D", "5S", "KH", "AD"]);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Order hand" }));
+
+    const orderedCards = Array.from(document.querySelectorAll("button.card-button")).map(
+      (element) => element.getAttribute("aria-label"),
+    );
+    expect(orderedCards).toEqual(["AD", "2D", "5S", "KH", "3C"]);
+  });
+
   it("shows round tracker and opens winning tricks modal", async () => {
     localStorage.setItem(
       "kachuful:session",

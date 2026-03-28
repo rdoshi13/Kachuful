@@ -85,7 +85,7 @@ const buildRound = (state: GameState, roundIndex: number): { state: GameState; e
 
   const dealerIndex = (state.dealerIndex + 1) % state.players.length;
   const blind = cardsPerPlayer === 1;
-  const { shuffled, nextSeed } = shuffleWithSeed(getDeck(), state.rngSeed);
+  const { shuffled, nextSeed } = shuffleWithSeed(getDeck({ playerCount: state.players.length }), state.rngSeed);
 
   const round: RoundState = {
     roundIndex,
