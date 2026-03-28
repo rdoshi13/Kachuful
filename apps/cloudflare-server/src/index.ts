@@ -72,6 +72,7 @@ const createRoomCode = (): string => {
 };
 
 const sanitizeName = (name: string): string => name.trim().slice(0, 32);
+const normalizeName = (name: string): string => sanitizeName(name).toLocaleLowerCase();
 
 const asObject = (value: unknown): Record<string, unknown> | null =>
   typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
@@ -247,6 +248,26 @@ export class GameHub extends DurableObject<Env> {
     if (room.locked) {
       return jsonResponse(409, { error: "Room is locked" });
     }
+
+    const existingPlayer = room.players.find(
+      (player) => normalizeName(player.name) === normalizeName(cleanName)
+    );
+    if (existingPlayer) {
+      if (existingPlayer.connected) {
+        return jsonResponse(409, { error: "Name is already in use" });
+      }
+
+      existingPlayer.sessionToken = crypto.randomUUID();
+      await this.persistState();
+
+      const response: RoomJoinResponse = {
+        roomCode: room.roomCode,
+        playerId: existingPlayer.playerId,
+        sessionToken: existingPlayer.sessionToken
+      };
+      return jsonResponse(200, response);
+    }
+
     if (room.players.length >= MAX_PLAYERS_PER_ROOM) {
       return jsonResponse(409, { error: "Room is full" });
     }

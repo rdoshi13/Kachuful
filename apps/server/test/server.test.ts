@@ -111,6 +111,52 @@ describe("server integration", () => {
     expect(joined.playerId).not.toBe(created.playerId);
   });
 
+  it("reuses offline seat when rejoining with the same name", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const firstGuest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const secondGuest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    expect(secondGuest.playerId).toBe(firstGuest.playerId);
+    expect(secondGuest.sessionToken).not.toBe(firstGuest.sessionToken);
+
+    const room = store.getRoom(host.roomCode);
+    expect(room?.players.map((player) => player.name)).toEqual(["Host", "Guest"]);
+  });
+
+  it("rejects joining with an already-online name", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(guestSocket);
+    await waitForConnect(guestSocket);
+    guestSocket.emit("room:join", guest);
+    await waitForEvent<RoomStatePayload>(guestSocket, "room:state");
+
+    const duplicateJoin = await request(baseUrl)
+      .post(`/rooms/${host.roomCode}/join`)
+      .send({ name: "Guest" })
+      .expect(409);
+
+    expect(duplicateJoin.body.error).toContain("already in use");
+  });
+
   it("broadcasts game state and rejects invalid out-of-turn commands", async () => {
     const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
     const guest = (

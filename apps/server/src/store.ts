@@ -20,6 +20,7 @@ const createRoomCode = (): string => {
 };
 
 const sanitizeName = (name: string): string => name.trim().slice(0, 32);
+const normalizeName = (name: string): string => sanitizeName(name).toLocaleLowerCase();
 
 export class RoomStore {
   private readonly rooms = new Map<string, Room>();
@@ -75,13 +76,33 @@ export class RoomStore {
     if (room.locked) {
       throw new Error("Room is locked");
     }
-    if (room.players.length >= 6) {
-      throw new Error("Room is full");
-    }
 
     const cleanName = sanitizeName(name);
     if (!cleanName) {
       throw new Error("Name is required");
+    }
+
+    const existingPlayer = room.players.find(
+      (player) => normalizeName(player.name) === normalizeName(cleanName)
+    );
+    if (existingPlayer) {
+      if (existingPlayer.connected) {
+        throw new Error("Name is already in use");
+      }
+
+      existingPlayer.sessionToken = randomUUID();
+      return {
+        room,
+        response: {
+          roomCode: room.roomCode,
+          playerId: existingPlayer.playerId,
+          sessionToken: existingPlayer.sessionToken
+        }
+      };
+    }
+
+    if (room.players.length >= 6) {
+      throw new Error("Room is full");
     }
 
     const playerId = randomUUID();

@@ -39,7 +39,7 @@ export const createApp = (store: RoomStore, historyStore: MatchHistoryStore) => 
       if (message.includes("not found")) {
         return res.status(404).json({ error: message });
       }
-      if (message.includes("locked") || message.includes("full")) {
+      if (message.includes("locked") || message.includes("full") || message.includes("already in use")) {
         return res.status(409).json({ error: message });
       }
       return res.status(400).json({ error: message });

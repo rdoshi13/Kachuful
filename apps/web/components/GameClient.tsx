@@ -338,7 +338,7 @@ export function GameClient() {
                 {player.playerId === roomState.hostPlayerId ? (
                   <span className="pill">host</span>
                 ) : null}
-                <span className="pill">
+                <span className={`pill${player.connected ? "" : " pill--offline"}`}>
                   {player.connected ? "online" : "offline"}
                 </span>
               </p>
@@ -583,11 +583,15 @@ export function GameClient() {
                   {gameState.players.map((player) => {
                     const bid = currentRound.bids[player.playerId];
                     const won = currentRound.tricksWon[player.playerId] ?? 0;
+                    const isSelf = session?.playerId === player.playerId;
                     const wonCount = currentRound.trickHistory.filter(
                       (trick) => trick.winnerId === player.playerId,
                     ).length;
                     return (
-                      <div className="round-stats__row" key={player.playerId}>
+                      <div
+                        className={`round-stats__row${isSelf ? " round-stats__row--self" : ""}`}
+                        key={player.playerId}
+                      >
                         <p className="round-stats__name">{player.name}</p>
                         <p className="round-stats__meta">Bid: {bid ?? "-"}</p>
                         <p className="round-stats__meta">Won: {won}</p>

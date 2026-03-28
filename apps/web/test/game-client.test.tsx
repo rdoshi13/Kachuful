@@ -131,6 +131,36 @@ describe("GameClient", () => {
     expect(await screen.findByRole("button", { name: "Start game" })).toBeInTheDocument();
   });
 
+  it("renders offline presence pill in red style", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: false,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: false },
+      ],
+    });
+
+    const offlinePill = await screen.findByText("offline");
+    expect(offlinePill).toHaveClass("pill", "pill--offline");
+  });
+
   it("disables compulsory dealer bid in bidding UI", async () => {
     localStorage.setItem(
       "kachuful:session",
@@ -415,11 +445,14 @@ describe("GameClient", () => {
     expect(await screen.findByText("Round Tracker")).toBeInTheDocument();
     expect(await screen.findByText("Bid: 1")).toBeInTheDocument();
     expect(await screen.findByText("Won: 1")).toBeInTheDocument();
+    const hostWinningButton = await screen.findByRole("button", {
+      name: "View winning tricks for Host",
+    });
+    const hostRow = hostWinningButton.closest(".round-stats__row");
+    expect(hostRow).toHaveClass("round-stats__row--self");
 
     fireEvent.click(
-      await screen.findByRole("button", {
-        name: "View winning tricks for Host",
-      }),
+      hostWinningButton,
     );
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
