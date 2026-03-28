@@ -34,11 +34,6 @@ const SUIT_SYMBOL: Record<Suit, string> = {
   C: "♣",
   H: "♥",
 };
-const PHASE_LABEL_OVERRIDES: Partial<Record<PublicGameView["phase"], string>> =
-  {
-    bidding: "Bidding",
-    trick_play: "Play",
-  };
 const BASE_HAND_SUIT_ORDER: Suit[] = ["S", "H", "C", "D"];
 const RANK_VALUE: Record<string, number> = {
   "2": 2,
@@ -75,16 +70,6 @@ const sortHandCards = (cardIds: string[], trumpSuit: Suit | null): string[] => {
     return rightRank - leftRank;
   });
 };
-
-const toTitleCase = (value: string): string =>
-  value.slice(0, 1).toUpperCase() + value.slice(1);
-
-const getPhaseLabel = (phase: PublicGameView["phase"]): string =>
-  PHASE_LABEL_OVERRIDES[phase] ??
-  phase
-    .split("_")
-    .map((segment) => toTitleCase(segment))
-    .join(" ");
 
 interface TrickRevealState {
   plays: TrickPlay[];
@@ -530,36 +515,68 @@ export function GameClient() {
 
   if (!session) {
     return (
-      <section>
+      <section className="lobby-shell">
         <h2>Join or Create Room</h2>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void createRoomFlow();
-          }}
-        >
+        <p className="lobby-shell__subtitle">
+          Enter your name once, then create a room or join with a shared code.
+        </p>
+        <div className="lobby-steps">
+          <span className="lobby-step">1. Enter your name</span>
+          <span className="lobby-step">2. Create or join room</span>
+          <span className="lobby-step">3. Share room code</span>
+        </div>
+        <div className="lobby-name">
+          <label className="lobby-label" htmlFor="player-name-input">
+            Player name
+          </label>
           <input
+            id="player-name-input"
             aria-label="name"
             placeholder="Your name"
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
-          <button type="submit">Create room</button>
-        </form>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void joinRoomFlow();
-          }}
-        >
-          <input
-            aria-label="room-code"
-            placeholder="Room code"
-            value={joinCode}
-            onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-          />
-          <button type="submit">Join room</button>
-        </form>
+        </div>
+        <div className="lobby-grid">
+          <form
+            className="lobby-card"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void createRoomFlow();
+            }}
+          >
+            <h3>Create Room</h3>
+            <p>Start a private table and invite players with a room code.</p>
+            <button className="btn-success" type="submit">
+              Create room
+            </button>
+          </form>
+          <form
+            className="lobby-card lobby-card--join"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void joinRoomFlow();
+            }}
+          >
+            <h3>Join Room</h3>
+            <p>Paste the room code shared by the host.</p>
+            <label className="lobby-label" htmlFor="room-code-input">
+              Room code
+            </label>
+            <input
+              id="room-code-input"
+              aria-label="room-code"
+              placeholder="Room code"
+              value={joinCode}
+              onChange={(event) =>
+                setJoinCode(event.target.value.toUpperCase())
+              }
+            />
+            <button className="btn-info" type="submit">
+              Join room
+            </button>
+          </form>
+        </div>
         {error ? <p className="error">{error}</p> : null}
       </section>
     );
@@ -567,12 +584,12 @@ export function GameClient() {
 
   return (
     <>
-      <section>
+      <section className="room-shell">
         <div className="room-header">
           <h2>Room {session.roomCode}</h2>
           <button
             aria-label="Copy room code"
-            className="secondary room-copy-button"
+            className="secondary btn-info-soft room-copy-button"
             onClick={() => {
               void handleCopyRoomCode();
             }}
@@ -581,16 +598,16 @@ export function GameClient() {
             {copiedRoomCode ? "Copied" : "Copy code"}
           </button>
         </div>
-        <div className="row">
+        <div className="row room-actions">
           <button
-            className="secondary"
+            className="secondary btn-info-soft"
             onClick={() => setShowHowToPlay(true)}
             type="button"
           >
             How to Play
           </button>
           <button
-            className="secondary"
+            className="secondary btn-info"
             onClick={() => {
               socketRef.current?.emit("state:sync_request");
             }}
@@ -598,12 +615,14 @@ export function GameClient() {
           >
             Sync state
           </button>
-          <button className="secondary" onClick={leaveSession} type="button">
+          <button className="secondary btn-danger-soft" onClick={leaveSession} type="button">
             Leave
           </button>
           {isHost && roomState ? (
             <button
-              className="secondary"
+              className={`secondary ${
+                roomState.locked ? "btn-success-soft" : "btn-warning-soft"
+              }`}
               onClick={() => {
                 socketRef.current?.emit("room:lock_toggle", {
                   locked: !roomState.locked,
@@ -616,6 +635,7 @@ export function GameClient() {
           ) : null}
           {canEndGame ? (
             <button
+              className="btn-danger room-actions__primary"
               onClick={() => {
                 socketRef.current?.emit("game:end");
               }}
@@ -626,6 +646,7 @@ export function GameClient() {
           ) : null}
           {canStart ? (
             <button
+              className="btn-success room-actions__primary"
               onClick={() => {
                 socketRef.current?.emit("game:start");
               }}
@@ -635,12 +656,12 @@ export function GameClient() {
             </button>
           ) : null}
         </div>
-        <p>
+        <p className="room-status-line">
           {gameStatusLabel}
           {roomState ? ` • ${roomLockLabel}` : ""}
         </p>
         {roomState ? (
-          <div>
+          <div className="room-player-list">
             {roomState.players.map((player) => {
               const isSpectator =
                 isMatchInProgress && !currentGamePlayerIds.has(player.playerId);
@@ -666,7 +687,7 @@ export function GameClient() {
       </section>
 
       {gameState ? (
-        <section>
+        <section className="game-shell">
           <div className="game-layout">
             <div className="game-main">
               <h2>Game</h2>
@@ -692,7 +713,7 @@ export function GameClient() {
                     <div className="row turn-actions turn-actions--active">
                       {bidValues(bidding.cardsPerPlayer).map((bid) => (
                         <button
-                          className="turn-actions__button"
+                          className="turn-actions__button btn-success"
                           key={bid}
                           onClick={() => submitBid(bid)}
                           type="button"
@@ -743,7 +764,7 @@ export function GameClient() {
                   <div className="hand-section__header">
                     <p>Your hand</p>
                     <button
-                      className="secondary"
+                      className="secondary btn-warning-soft"
                       onClick={() => setIsHandOrdered(true)}
                       type="button"
                     >
@@ -782,7 +803,7 @@ export function GameClient() {
               ) : null}
 
               <h3>Scoreboard</h3>
-              <table>
+              <table className="score-table">
                 <thead>
                   <tr>
                     <th>Player</th>
@@ -809,6 +830,7 @@ export function GameClient() {
                   </p>
                   {isHost ? (
                     <button
+                      className="btn-success"
                       onClick={() => {
                         socketRef.current?.emit("game:restart");
                       }}
@@ -961,7 +983,7 @@ export function GameClient() {
                         </p>
                         <button
                           aria-label={`View winning tricks for ${player.name}`}
-                          className="secondary round-stats__button"
+                          className="secondary btn-info-soft round-stats__button"
                           disabled={wonCount === 0}
                           onClick={() =>
                             setSelectedWinnerPlayerId(player.playerId)
@@ -972,7 +994,7 @@ export function GameClient() {
                         </button>
                         <button
                           aria-label={`View round summary for ${player.name}`}
-                          className="secondary round-stats__button"
+                          className="secondary btn-info-soft round-stats__button"
                           disabled={gameState.completedRounds.length === 0}
                           onClick={() =>
                             setSelectedSummaryPlayerId(player.playerId)

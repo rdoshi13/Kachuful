@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "byRoom": {
+    "NZT43P": [
+      {
+        "matchId": "NZT43P:NZT43P:1:1774738262056",
+        "roomCode": "NZT43P",
+        "startedAt": 1,
+        "completedAt": 1774738262056,
+        "roundsPlayed": 2,
+        "winnerPlayerIds": [
+          "95602b27-5a31-49e5-bfa4-7736e21b9bd2"
+        ],
+        "players": [
+          {
+            "playerId": "95602b27-5a31-49e5-bfa4-7736e21b9bd2",
+            "name": "Incognito",
+            "score": 22
+          },
+          {
+            "playerId": "66b35d6f-c7df-41cf-a770-79cd1209dc2e",
+            "name": "Rishabh",
+            "score": 11
+          },
+          {
+            "playerId": "9f4cbdf6-e2d5-44c4-8628-a28dcd8212c3",
+            "name": "Incog 2",
+            "score": 10
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 1,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 1,
+              "9f4cbdf6-e2d5-44c4-8628-a28dcd8212c3": 0
+            },
+            "tricksWon": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 0,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 1,
+              "9f4cbdf6-e2d5-44c4-8628-a28dcd8212c3": 0
+            },
+            "scoreDelta": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 0,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 11,
+              "9f4cbdf6-e2d5-44c4-8628-a28dcd8212c3": 10
+            }
+          },
+          {
+            "roundIndex": 1,
+            "cardsPerPlayer": 2,
+            "trumpSuit": "D",
+            "bids": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 1,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 1,
+              "9f4cbdf6-e2d5-44c4-8628-a28dcd8212c3": 1
+            },
+            "tricksWon": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 1,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 1,
+              "9f4cbdf6-e2d5-44c4-8628-a28dcd8212c3": 0
+            },
+            "scoreDelta": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 11,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 11,
+              "9f4cbdf6-e2d5-44c4-8628-a28dcd8212c3": 0
+            }
+          }
+        ]
+      },
+      {
+        "matchId": "NZT43P:NZT43P:1:1774738199055",
+        "roomCode": "NZT43P",
+        "startedAt": 1,
+        "completedAt": 1774738199055,
+        "roundsPlayed": 1,
+        "winnerPlayerIds": [
+          "95602b27-5a31-49e5-bfa4-7736e21b9bd2"
+        ],
+        "players": [
+          {
+            "playerId": "95602b27-5a31-49e5-bfa4-7736e21b9bd2",
+            "name": "Incognito",
+            "score": 11
+          },
+          {
+            "playerId": "66b35d6f-c7df-41cf-a770-79cd1209dc2e",
+            "name": "Rishabh",
+            "score": 0
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 1,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 1
+            },
+            "tricksWon": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 0,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 1
+            },
+            "scoreDelta": {
+              "66b35d6f-c7df-41cf-a770-79cd1209dc2e": 0,
+              "95602b27-5a31-49e5-bfa4-7736e21b9bd2": 11
+            }
+          }
+        ]
+      }
+    ],
+    "JP9NSJ": [
+      {
+        "matchId": "JP9NSJ:JP9NSJ:1:1774739730579",
+        "roomCode": "JP9NSJ",
+        "startedAt": 1,
+        "completedAt": 1774739730579,
+        "roundsPlayed": 1,
+        "winnerPlayerIds": [
+          "9d9873b6-ec44-4953-86fb-b31e0f6a5b64"
+        ],
+        "players": [
+          {
+            "playerId": "9d9873b6-ec44-4953-86fb-b31e0f6a5b64",
+            "name": "Rishabh",
+            "score": 11
+          },
+          {
+            "playerId": "5aee9c07-da2d-4903-bf54-94b73c48cd58",
+            "name": "Incognito",
+            "score": 0
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 1,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 1
+            },
+            "tricksWon": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 1,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 0
+            },
+            "scoreDelta": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 11,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
