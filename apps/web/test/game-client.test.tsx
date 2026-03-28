@@ -163,6 +163,34 @@ describe("GameClient", () => {
     expect(onlineDot).toHaveClass("status-dot", "status-dot--online");
   });
 
+  it("opens and closes how to play modal with rules and app controls", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "How to Play" }));
+
+    expect(await screen.findByText("How to Play Kachuful")).toBeInTheDocument();
+    expect(await screen.findByText("Rules")).toBeInTheDocument();
+    expect(await screen.findByText("Buttons in this app")).toBeInTheDocument();
+    expect(await screen.findByText("You must follow lead suit if possible.")).toBeInTheDocument();
+    expect(await screen.findByText("Order hand: sort your cards with trump first.")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByText("How to Play Kachuful")).not.toBeInTheDocument();
+    });
+  });
+
   it("disables compulsory dealer bid in bidding UI", async () => {
     localStorage.setItem(
       "kachuful:session",
@@ -496,8 +524,8 @@ describe("GameClient", () => {
         dealerIndex: 1,
         blind: false,
         cardsDealt: true,
-        bids: { p1: null, p2: null, p3: null },
-        bidTurnPlayerId: "p2",
+        bids: { p1: null, p2: 1, p3: 0 },
+        bidTurnPlayerId: "p1",
         tricksWon: { p1: 0, p2: 0, p3: 0 },
         leadPlayerId: "p2",
         turnPlayerId: "p2",
@@ -529,6 +557,7 @@ describe("GameClient", () => {
       expect(document.querySelectorAll(".trick-card")).toHaveLength(3);
     });
     expect(document.querySelectorAll(".trick-card--winner")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Bid 0" })).not.toBeInTheDocument();
 
     await new Promise((resolve) => {
       setTimeout(resolve, 2100);
@@ -536,6 +565,7 @@ describe("GameClient", () => {
     await waitFor(() => {
       expect(document.querySelectorAll(".trick-card")).toHaveLength(0);
     });
+    expect(await screen.findByRole("button", { name: "Bid 0" })).toBeInTheDocument();
   });
 
   it("shows trump suit label, trump preview, and cards-per-round info", async () => {

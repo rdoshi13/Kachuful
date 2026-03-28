@@ -339,6 +339,22 @@ td {
   margin-bottom: 0.6rem;
 }
 
+.howto-section + .howto-section {
+  margin-top: 0.85rem;
+}
+
+.howto-section h4 {
+  margin: 0 0 0.45rem;
+}
+
+.howto-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #334155;
+  display: grid;
+  gap: 0.35rem;
+}
+
 .won-tricks {
   display: grid;
   gap: 0.7rem;

@@ -134,6 +134,7 @@ export function GameClient() {
   const [selectedSummaryPlayerId, setSelectedSummaryPlayerId] = useState<
     string | null
   >(null);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [isHandOrdered, setIsHandOrdered] = useState(false);
   const [revealedCompletedTrick, setRevealedCompletedTrick] =
     useState<TrickRevealState | null>(null);
@@ -218,6 +219,23 @@ export function GameClient() {
     };
   }, [session]);
 
+  useEffect(() => {
+    if (!showHowToPlay) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowHowToPlay(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showHowToPlay]);
+
   const createRoomFlow = async () => {
     try {
       setError(null);
@@ -268,6 +286,7 @@ export function GameClient() {
     setRoomState(null);
     setGameState(null);
     setInfo(null);
+    setShowHowToPlay(false);
     setSelectedSummaryPlayerId(null);
     setRevealedCompletedTrick(null);
     clearTrickRevealTimeout();
@@ -287,12 +306,16 @@ export function GameClient() {
     gameState?.phase === "trick_play" ? gameState.currentRound : null;
   const currentRound = gameState?.currentRound ?? null;
   const visibleRoundNumber = gameState ? gameState.roundNumber + 1 : 0;
-  const handRound = trickPlay ?? (bidding?.cardsDealt ? bidding : null);
   const isBidTurn = bidding?.bidTurnPlayerId === session?.playerId;
   const isPlayTurn = trickPlay?.turnPlayerId === session?.playerId;
   const displayTrickCards =
     revealedCompletedTrick?.plays ?? trickPlay?.currentTrick ?? [];
   const isTrickRevealActive = Boolean(revealedCompletedTrick);
+  const isRoundTransitionRevealActive =
+    isTrickRevealActive && gameState?.phase !== "trick_play";
+  const handRound = isRoundTransitionRevealActive
+    ? trickPlay
+    : trickPlay ?? (bidding?.cardsDealt ? bidding : null);
   const winnerIdInDisplayedTrick = revealedCompletedTrick?.winnerId ?? null;
   const playerNameById = useMemo(
     () =>
@@ -410,6 +433,13 @@ export function GameClient() {
         <div className="row">
           <button
             className="secondary"
+            onClick={() => setShowHowToPlay(true)}
+            type="button"
+          >
+            How to Play
+          </button>
+          <button
+            className="secondary"
             onClick={() => {
               socketRef.current?.emit("state:sync_request");
             }}
@@ -461,7 +491,7 @@ export function GameClient() {
               <p>Phase: {getPhaseLabel(gameState.phase)}</p>
               <p>Round: {visibleRoundNumber}</p>
 
-              {bidding ? (
+              {bidding && !isRoundTransitionRevealActive ? (
                 <div>
                   <p>
                     Turn:{" "}
@@ -858,6 +888,64 @@ export function GameClient() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      ) : null}
+
+      {showHowToPlay ? (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowHowToPlay(false)}
+          role="presentation"
+        >
+          <div
+            aria-modal="true"
+            className="modal-card"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="modal-card__header">
+              <h3>How to Play Kachuful</h3>
+              <button
+                className="secondary"
+                onClick={() => setShowHowToPlay(false)}
+                type="button"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="howto-section">
+              <h4>Rules</h4>
+              <ul className="howto-list">
+                <li>2 to 6 players can join a room.</li>
+                <li>Round pattern is 1,2,3,4,5,6,7,8,7,6,5,4,3,2,1 cards.</li>
+                <li>Trump suit rotates every round: Spades, Diamonds, Clubs, Hearts.</li>
+                <li>Round 1 is blind: bids lock first, then cards are revealed.</li>
+                <li>Dealer cannot make the final bid that makes total bids equal total tricks.</li>
+                <li>You must follow lead suit if possible.</li>
+                <li>Highest trump wins; if no trump, highest lead-suit card wins.</li>
+                <li>Exact bid scores 10 + tricks won; miss scores 0.</li>
+                <li>
+                  Completed tricks are revealed briefly and the winner card is highlighted.
+                </li>
+              </ul>
+            </div>
+
+            <div className="howto-section">
+              <h4>Buttons in this app</h4>
+              <ul className="howto-list">
+                <li>Create room: create a new private room code.</li>
+                <li>Join room: join an existing room code.</li>
+                <li>Start game: host only, requires at least 2 players.</li>
+                <li>Bid X: submit your bid for the round.</li>
+                <li>Order hand: sort your cards with trump first.</li>
+                <li>Winning tricks: open tricks won by that player this round.</li>
+                <li>Round summary: open that player’s round-by-round results.</li>
+                <li>Sync state: re-fetch latest room and game state.</li>
+                <li>Leave: leave the room on this device.</li>
+              </ul>
+            </div>
           </div>
         </div>
       ) : null}
