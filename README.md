@@ -2,55 +2,52 @@
 
 Kachuful is a Gujarati trick-taking card game (related to Oh Hell/Judgment) built as a private multiplayer web app for family play.
 
-## Live App
+## Live Endpoints
 
-- Public URL: `https://kachuful-server.rdoshi13.workers.dev`
-
-This URL serves both:
-- frontend UI (`GET /`)
-- backend APIs + WebSocket events (`/rooms`, `/ws`, etc.)
+- Frontend (Vercel): `https://play.rishabhdoshi.me` (target custom subdomain)
+- Backend (Cloudflare Worker): `https://kachuful-server.rdoshi13.workers.dev`
 
 ## Current Status
 
-- Deterministic game engine implemented and tested
-- Server-authoritative multiplayer implemented
-- Same-device reconnect support implemented
-- Trump suit rules implemented
-- Match history persisted in backend state
-- Cloudflare deployment live
+- Deterministic engine with tests
+- Server-authoritative multiplayer
+- Same-device reconnect support
+- Trump suit gameplay
+- Persistent match history
+- Split deploy model:
+  - frontend on Vercel
+  - backend on Cloudflare Workers
 
 ## Project Structure
 
 - `apps/web` - Next.js frontend
-- `apps/server` - local Node/Express + Socket.IO server (kept for local/integration workflows)
+- `apps/server` - local Node/Express + Socket.IO server
 - `apps/cloudflare-server` - production Cloudflare Worker + Durable Object backend
 - `packages/game-engine` - pure reducer game rules/state machine
 - `packages/shared-types` - shared contracts/types
 
 ## Core Rules (v1)
 
-- Players: 3-6 recommended
-- Deck: standard 52-card
+- Players: `2-6` (recommended `3-6`)
 - Round pattern:
 
 ```text
 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 7 -> 6 -> 5 -> 4 -> 3 -> 2 -> 1
 ```
 
-- Dealer bids last and cannot make total bids equal cards dealt (compulsory dealer rule)
-- 1-card rounds are blind:
-  - bid before seeing cards
-  - reveal after bids lock
+- Deck:
+  - `2-5 players`: full 52-card deck
+  - `6 players`: 48-card short deck (all `2`s removed)
+- Dealer bids last and cannot make total bids equal cards dealt
+- 1-card rounds are blind (bid first, reveal after bids lock)
 - Follow-suit enforced
-- Trump order rotates by round:
-  - `Spades -> Diamonds -> Clubs -> Hearts` (repeat)
+- Trump order rotates by round: `Spades -> Diamonds -> Clubs -> Hearts` (repeat)
 - Scoring:
   - exact bid: `10 + tricksWon`
   - miss: `0`
 
-## Runtime API (Cloudflare Worker)
+## Backend API (Cloudflare Worker)
 
-- `GET /` - frontend
 - `GET /health` - health check
 - `POST /rooms` - create room
 - `POST /rooms/:code/join` - join room
@@ -65,36 +62,51 @@ WebSocket message envelope:
 
 ## Auto Deploy (GitHub Actions)
 
-Workflow file:
-- `.github/workflows/deploy-cloudflare.yml`
+Workflows:
+- `.github/workflows/deploy-cloudflare.yml` - deploys backend only
+- `.github/workflows/deploy-vercel.yml` - deploys frontend only
 
-Trigger:
-- every push to `main`
-- manual dispatch from Actions tab
+Triggers:
+- push to `main`
+- manual dispatch
 
-### One-Time Setup
+### Required GitHub Secrets
 
-In GitHub repo:
-1. `Settings` -> `Secrets and variables` -> `Actions`
-2. Add repository secret `CLOUDFLARE_API_TOKEN`
-3. Add repository secret `CLOUDFLARE_ACCOUNT_ID`
-   - value: `03fa06c1334ae6ef4fd3aff628ba23a0`
+Add under `Settings -> Secrets and variables -> Actions`:
 
-Then push to `main` to trigger deployment.
+Cloudflare:
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID` (`03fa06c1334ae6ef4fd3aff628ba23a0`)
+
+Vercel:
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+### Required Vercel Project Environment Variables
+
+Set these in Vercel Project Settings:
+
+- `NEXT_PUBLIC_API_BASE=https://kachuful-server.rdoshi13.workers.dev`
+- `NEXT_PUBLIC_SOCKET_URL=https://kachuful-server.rdoshi13.workers.dev`
+- `NEXT_PUBLIC_SOCKET_TRANSPORT=ws`
 
 ## Manual Deploy (Fallback)
 
-From repo root:
+Backend only:
 
 ```bash
-NEXT_PUBLIC_API_BASE=https://kachuful-server.rdoshi13.workers.dev \
-NEXT_PUBLIC_SOCKET_URL=https://kachuful-server.rdoshi13.workers.dev \
-pnpm --filter @kachuful/web build
-
 pnpm --filter @kachuful/cloudflare-server exec wrangler deploy \
   --name kachuful-server \
-  --compatibility-date 2026-03-27 \
-  --assets ../web/out
+  --compatibility-date 2026-03-27
+```
+
+Frontend only (from `apps/web`):
+
+```bash
+pnpm dlx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+pnpm dlx vercel build --prod --token="$VERCEL_TOKEN"
+pnpm dlx vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
 ```
 
 ## Local Development
@@ -105,16 +117,26 @@ Install dependencies:
 pnpm install
 ```
 
-Run frontend locally:
-
-```bash
-pnpm --filter @kachuful/web dev
-```
-
-Run local Node server (optional):
+Run local backend:
 
 ```bash
 pnpm --filter @kachuful/server dev
+```
+
+Run frontend against local backend:
+
+```bash
+NEXT_PUBLIC_API_BASE=http://localhost:4000 \
+NEXT_PUBLIC_SOCKET_URL=http://localhost:4000 \
+pnpm --filter @kachuful/web dev
+```
+
+Run frontend against cloud backend:
+
+```bash
+NEXT_PUBLIC_API_BASE=https://kachuful-server.rdoshi13.workers.dev \
+NEXT_PUBLIC_SOCKET_URL=https://kachuful-server.rdoshi13.workers.dev \
+pnpm --filter @kachuful/web dev
 ```
 
 ## Testing
