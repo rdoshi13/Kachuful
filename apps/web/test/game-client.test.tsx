@@ -131,7 +131,7 @@ describe("GameClient", () => {
     expect(await screen.findByRole("button", { name: "Start game" })).toBeInTheDocument();
   });
 
-  it("renders offline presence pill in red style", async () => {
+  it("renders online/offline status dots", async () => {
     localStorage.setItem(
       "kachuful:session",
       JSON.stringify({
@@ -157,8 +157,10 @@ describe("GameClient", () => {
       ],
     });
 
-    const offlinePill = await screen.findByText("offline");
-    expect(offlinePill).toHaveClass("pill", "pill--offline");
+    const offlineDot = await screen.findByLabelText("Guest offline");
+    const onlineDot = await screen.findByLabelText("Host online");
+    expect(offlineDot).toHaveClass("status-dot", "status-dot--offline");
+    expect(onlineDot).toHaveClass("status-dot", "status-dot--online");
   });
 
   it("disables compulsory dealer bid in bidding UI", async () => {
@@ -458,6 +460,80 @@ describe("GameClient", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(await screen.findByText("Host winning tricks")).toBeInTheDocument();
     expect(await screen.findByText("Trick 1")).toBeInTheDocument();
+  });
+
+  it("shows last trick for 1 second across round transition and highlights winner", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+        { playerId: "p3", name: "Third" },
+      ],
+      phase: "bidding",
+      scores: { p1: 11, p2: 0, p3: 0 },
+      roundNumber: 3,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 3,
+        cardsPerPlayer: 2,
+        trumpSuit: "S",
+        dealerIndex: 1,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: null, p2: null, p3: null },
+        bidTurnPlayerId: "p2",
+        tricksWon: { p1: 0, p2: 0, p3: 0 },
+        leadPlayerId: "p2",
+        turnPlayerId: "p2",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 2, p2: 2, p3: 2 },
+        viewerHand: ["5S", "7D"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    expect(screen.queryByText("Last trick")).not.toBeInTheDocument();
+
+    lastSocket?.trigger("game:trick_reveal", {
+      winnerId: "p3",
+      winnerCardId: "2H",
+      trickCount: 3,
+      roundIndex: 2,
+      plays: [
+        { playerId: "p1", cardId: "3H" },
+        { playerId: "p2", cardId: "4H" },
+        { playerId: "p3", cardId: "2H" },
+      ],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Last trick")).toBeInTheDocument();
+      expect(document.querySelectorAll(".trick-card")).toHaveLength(3);
+    });
+    expect(document.querySelectorAll(".trick-card--winner")).toHaveLength(1);
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 1100);
+    });
+    expect(document.querySelectorAll(".trick-card")).toHaveLength(0);
   });
 
   it("shows trump suit label, trump preview, and cards-per-round info", async () => {

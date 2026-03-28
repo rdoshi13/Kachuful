@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { PublicGameView, RoomStatePayload, Suit } from "@kachuful/shared-types";
+import type {
+  PublicGameView,
+  RoomStatePayload,
+  Suit,
+  TrickPlay,
+} from "@kachuful/shared-types";
 import { createRoom, joinRoom } from "../lib/api";
 import {
   clearSession,
@@ -14,11 +19,16 @@ import { PlayingCard } from "./PlayingCard";
 
 const bidValues = (max: number): number[] =>
   Array.from({ length: max + 1 }, (_, index) => index);
+const TRICK_REVEAL_DURATION_MS = 1000;
 const TRUMP_SUIT_LABEL: Record<Suit, string> = {
   S: "Spades",
   D: "Diamonds",
   C: "Clubs",
   H: "Hearts",
+};
+const PHASE_LABEL_OVERRIDES: Partial<Record<PublicGameView["phase"], string>> = {
+  bidding: "Bidding",
+  trick_play: "Play",
 };
 const BASE_HAND_SUIT_ORDER: Suit[] = ["S", "H", "C", "D"];
 const RANK_VALUE: Record<string, number> = {
@@ -56,6 +66,56 @@ const sortHandCards = (cardIds: string[], trumpSuit: Suit | null): string[] => {
   });
 };
 
+const toTitleCase = (value: string): string =>
+  value.slice(0, 1).toUpperCase() + value.slice(1);
+
+const getPhaseLabel = (phase: PublicGameView["phase"]): string =>
+  PHASE_LABEL_OVERRIDES[phase]
+  ?? phase
+    .split("_")
+    .map((segment) => toTitleCase(segment))
+    .join(" ");
+
+interface TrickRevealState {
+  plays: TrickPlay[];
+  winnerId: string;
+}
+
+const asObject = (value: unknown): Record<string, unknown> | null =>
+  typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
+
+const parseTrickRevealPayload = (value: unknown): TrickRevealState | null => {
+  const payload = asObject(value);
+  if (!payload) {
+    return null;
+  }
+
+  const winnerId = payload.winnerId;
+  const plays = payload.plays;
+  if (typeof winnerId !== "string" || !Array.isArray(plays)) {
+    return null;
+  }
+
+  const parsedPlays: TrickPlay[] = [];
+  for (const play of plays) {
+    const parsedPlay = asObject(play);
+    if (!parsedPlay) {
+      return null;
+    }
+    const playerId = parsedPlay.playerId;
+    const cardId = parsedPlay.cardId;
+    if (typeof playerId !== "string" || typeof cardId !== "string") {
+      return null;
+    }
+    parsedPlays.push({ playerId, cardId });
+  }
+
+  return {
+    winnerId,
+    plays: parsedPlays,
+  };
+};
+
 export function GameClient() {
   const [name, setName] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -71,8 +131,29 @@ export function GameClient() {
     string | null
   >(null);
   const [isHandOrdered, setIsHandOrdered] = useState(false);
+  const [revealedCompletedTrick, setRevealedCompletedTrick] = useState<
+    TrickRevealState | null
+  >(null);
 
   const socketRef = useRef<GameSocket | null>(null);
+  const trickRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTrickRevealTimeout = () => {
+    if (!trickRevealTimeoutRef.current) {
+      return;
+    }
+    clearTimeout(trickRevealTimeoutRef.current);
+    trickRevealTimeoutRef.current = null;
+  };
+
+  const revealCompletedTrick = (trick: TrickRevealState) => {
+    clearTrickRevealTimeout();
+    setRevealedCompletedTrick(trick);
+    trickRevealTimeoutRef.current = setTimeout(() => {
+      setRevealedCompletedTrick(null);
+      trickRevealTimeoutRef.current = null;
+    }, TRICK_REVEAL_DURATION_MS);
+  };
 
   useEffect(() => {
     const existing = loadSession();
@@ -109,6 +190,13 @@ export function GameClient() {
       setGameState(payload);
       setError(null);
     });
+    socket.on("game:trick_reveal", (payload: unknown) => {
+      const parsed = parseTrickRevealPayload(payload);
+      if (!parsed) {
+        return;
+      }
+      revealCompletedTrick(parsed);
+    });
     socket.on("game:error", (payload: { code: string; message: string }) => {
       setError(payload.message);
     });
@@ -119,6 +207,7 @@ export function GameClient() {
     });
 
     return () => {
+      clearTrickRevealTimeout();
       socket.disconnect();
       socketRef.current = null;
     };
@@ -175,6 +264,8 @@ export function GameClient() {
     setGameState(null);
     setInfo(null);
     setSelectedSummaryPlayerId(null);
+    setRevealedCompletedTrick(null);
+    clearTrickRevealTimeout();
   };
 
   const isHost = roomState?.hostPlayerId === session?.playerId;
@@ -194,6 +285,10 @@ export function GameClient() {
   const handRound = trickPlay ?? (bidding?.cardsDealt ? bidding : null);
   const isBidTurn = bidding?.bidTurnPlayerId === session?.playerId;
   const isPlayTurn = trickPlay?.turnPlayerId === session?.playerId;
+  const displayTrickCards =
+    revealedCompletedTrick?.plays ?? trickPlay?.currentTrick ?? [];
+  const isTrickRevealActive = Boolean(revealedCompletedTrick);
+  const winnerIdInDisplayedTrick = revealedCompletedTrick?.winnerId ?? null;
   const playerNameById = useMemo(
     () =>
       Object.fromEntries(
@@ -333,14 +428,16 @@ export function GameClient() {
         {roomState ? (
           <div>
             {roomState.players.map((player) => (
-              <p key={player.playerId}>
-                {player.name}
+              <p className="room-player" key={player.playerId}>
+                <span
+                  aria-label={`${player.name} ${player.connected ? "online" : "offline"}`}
+                  className={`status-dot ${player.connected ? "status-dot--online" : "status-dot--offline"}`}
+                  role="img"
+                />
+                <span>{player.name}</span>
                 {player.playerId === roomState.hostPlayerId ? (
                   <span className="pill">host</span>
                 ) : null}
-                <span className={`pill${player.connected ? "" : " pill--offline"}`}>
-                  {player.connected ? "online" : "offline"}
-                </span>
               </p>
             ))}
           </div>
@@ -354,7 +451,7 @@ export function GameClient() {
           <div className="game-layout">
             <div className="game-main">
               <h2>Game</h2>
-              <p>Phase: {gameState.phase}</p>
+              <p>Phase: {getPhaseLabel(gameState.phase)}</p>
               <p>Round: {visibleRoundNumber}</p>
 
               {bidding ? (
@@ -389,21 +486,26 @@ export function GameClient() {
                 </div>
               ) : null}
 
-              {trickPlay ? (
+              {trickPlay || isTrickRevealActive ? (
                 <div>
-                  <h3>Trick Play</h3>
-                  <p>
-                    Turn:{" "}
-                    {trickPlay.turnPlayerId
-                      ? getPlayerName(trickPlay.turnPlayerId)
-                      : "-"}
-                  </p>
+                  {trickPlay ? (
+                    <p>
+                      Turn:{" "}
+                      {trickPlay.turnPlayerId
+                        ? getPlayerName(trickPlay.turnPlayerId)
+                        : "-"}
+                    </p>
+                  ) : null}
                   <div>
-                    <p>Current trick</p>
+                    <p>{isTrickRevealActive ? "Last trick" : "Current trick"}</p>
                     <div className="cards">
-                      {trickPlay.currentTrick.map((play) => (
+                      {displayTrickCards.map((play) => (
                         <span
-                          className="trick-card"
+                          className={`trick-card${
+                            winnerIdInDisplayedTrick === play.playerId
+                              ? " trick-card--winner"
+                              : ""
+                          }`}
                           key={`${play.playerId}-${play.cardId}`}
                         >
                           <span className="trick-card__player">
@@ -434,6 +536,7 @@ export function GameClient() {
                       const canPlay = Boolean(
                         trickPlay &&
                         isPlayTurn &&
+                        !isTrickRevealActive &&
                         trickPlay.legalCardIds.includes(cardId),
                       );
                       return (

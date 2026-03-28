@@ -42,6 +42,14 @@ interface WireMessage {
   payload?: unknown;
 }
 
+interface TrickRevealPayload {
+  winnerId: string;
+  winnerCardId: string;
+  trickCount: number;
+  roundIndex: number;
+  plays: Array<{ playerId: string; cardId: string }>;
+}
+
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET,POST,OPTIONS",
@@ -76,6 +84,40 @@ const normalizeName = (name: string): string => sanitizeName(name).toLocaleLower
 
 const asObject = (value: unknown): Record<string, unknown> | null =>
   typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
+
+const asTrickRevealPayload = (value: unknown): TrickRevealPayload | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const payload = value as Partial<TrickRevealPayload>;
+  if (
+    typeof payload.winnerId !== "string"
+    || typeof payload.winnerCardId !== "string"
+    || typeof payload.trickCount !== "number"
+    || typeof payload.roundIndex !== "number"
+    || !Array.isArray(payload.plays)
+  ) {
+    return null;
+  }
+
+  const plays = payload.plays.filter((play): play is { playerId: string; cardId: string } =>
+    Boolean(play)
+    && typeof play === "object"
+    && typeof (play as { playerId?: unknown }).playerId === "string"
+    && typeof (play as { cardId?: unknown }).cardId === "string");
+  if (plays.length !== payload.plays.length) {
+    return null;
+  }
+
+  return {
+    winnerId: payload.winnerId,
+    winnerCardId: payload.winnerCardId,
+    trickCount: payload.trickCount,
+    roundIndex: payload.roundIndex,
+    plays
+  };
+};
 
 const parseJsonBody = async <T>(request: Request): Promise<T | null> => {
   try {
@@ -559,6 +601,16 @@ export class GameHub extends DurableObject<Env> {
     }
 
     room.gameState = result.state;
+    for (const event of result.events) {
+      if (event.type !== "trick_complete") {
+        continue;
+      }
+      const payload = asTrickRevealPayload(event.payload);
+      if (!payload) {
+        continue;
+      }
+      this.broadcastRoomEvent(roomCode, "game:trick_reveal", payload);
+    }
     if (!wasComplete && result.state.phase === "game_complete") {
       this.recordCompletedGame(roomCode, result.state);
     }

@@ -226,7 +226,7 @@ const dealBlindHands = (state: GameState): GameState => {
 const resolveTrickWinner = (
   trick: TrickPlay[],
   trumpSuit: Suit
-): { winnerId: string; leadSuit: Suit } => {
+): { winnerId: string; winnerCardId: CardId; leadSuit: Suit } => {
   const leadSuit = getCardSuit(trick[0]!.cardId);
 
   let winner = trick[0]!;
@@ -247,7 +247,7 @@ const resolveTrickWinner = (
     }
   }
 
-  return { winnerId: winner.playerId, leadSuit };
+  return { winnerId: winner.playerId, winnerCardId: winner.cardId, leadSuit };
 };
 
 export const createGame = (params: {
@@ -437,7 +437,13 @@ export const applyCommand = (state: GameState, command: Command): EngineResult =
     const trickEvents: EngineEvent[] = [{
       type: "trick_complete",
       at: now(),
-      payload: { winnerId: resolved.winnerId, trickCount: nextRound.trickHistory.length }
+      payload: {
+        winnerId: resolved.winnerId,
+        winnerCardId: resolved.winnerCardId,
+        trickCount: nextRound.trickHistory.length,
+        roundIndex: nextRound.roundIndex,
+        plays: trick
+      }
     }];
 
     if (nextRound.trickHistory.length < nextRound.cardsPerPlayer) {

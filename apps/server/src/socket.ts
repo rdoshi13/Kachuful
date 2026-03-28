@@ -13,11 +13,54 @@ interface JoinEvent {
   sessionToken: string;
 }
 
+interface TrickRevealPayload {
+  winnerId: string;
+  winnerCardId: string;
+  trickCount: number;
+  roundIndex: number;
+  plays: Array<{ playerId: string; cardId: string }>;
+}
+
 const emitGameError = (socket: Socket, message: string, code = "BAD_REQUEST"): void => {
   socket.emit("game:error", { code, message });
 };
 
 const roomPayload = (store: RoomStore, roomCode: string): RoomStatePayload => store.getRoomStatePayload(roomCode);
+
+const asTrickRevealPayload = (value: unknown): TrickRevealPayload | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const payload = value as Partial<TrickRevealPayload>;
+  if (
+    typeof payload.winnerId !== "string"
+    || typeof payload.winnerCardId !== "string"
+    || typeof payload.trickCount !== "number"
+    || typeof payload.roundIndex !== "number"
+    || !Array.isArray(payload.plays)
+  ) {
+    return null;
+  }
+
+  const plays = payload.plays.filter((play): play is { playerId: string; cardId: string } =>
+    Boolean(play)
+    && typeof play === "object"
+    && typeof (play as { playerId?: unknown }).playerId === "string"
+    && typeof (play as { cardId?: unknown }).cardId === "string");
+
+  if (plays.length !== payload.plays.length) {
+    return null;
+  }
+
+  return {
+    winnerId: payload.winnerId,
+    winnerCardId: payload.winnerCardId,
+    trickCount: payload.trickCount,
+    roundIndex: payload.roundIndex,
+    plays
+  };
+};
 
 interface CreateApiServerOptions {
   store?: RoomStore;
@@ -80,6 +123,16 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
     }
 
     store.setGameState(roomCode, result.state);
+    for (const event of result.events) {
+      if (event.type !== "trick_complete") {
+        continue;
+      }
+      const payload = asTrickRevealPayload(event.payload);
+      if (!payload) {
+        continue;
+      }
+      io.to(roomCode).emit("game:trick_reveal", payload);
+    }
     if (!wasComplete && result.state.phase === "game_complete") {
       historyStore.recordCompletedGame(roomCode, result.state);
     }
