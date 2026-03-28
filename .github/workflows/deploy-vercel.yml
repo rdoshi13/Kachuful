@@ -44,7 +44,6 @@ jobs:
         run: pnpm --filter @kachuful/web test
 
       - name: Build and deploy frontend to Vercel
-        working-directory: apps/web
         run: |
           pnpm dlx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
           pnpm dlx vercel build --prod --token="$VERCEL_TOKEN"
