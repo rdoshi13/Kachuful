@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
   PublicGameView,
+  RoundSummary,
   RoomStatePayload,
   Suit,
   TrickPlay,
@@ -20,11 +21,18 @@ import { PlayingCard } from "./PlayingCard";
 const bidValues = (max: number): number[] =>
   Array.from({ length: max + 1 }, (_, index) => index);
 const TRICK_REVEAL_DURATION_MS = 2000;
+const AUTO_SUMMARY_DELAY_MS = 2000;
 const TRUMP_SUIT_LABEL: Record<Suit, string> = {
   S: "Spades",
   D: "Diamonds",
   C: "Clubs",
   H: "Hearts",
+};
+const SUIT_SYMBOL: Record<Suit, string> = {
+  S: "♠",
+  D: "♦",
+  C: "♣",
+  H: "♥",
 };
 const PHASE_LABEL_OVERRIDES: Partial<Record<PublicGameView["phase"], string>> =
   {
@@ -134,15 +142,25 @@ export function GameClient() {
   const [selectedSummaryPlayerId, setSelectedSummaryPlayerId] = useState<
     string | null
   >(null);
+  const [selectedCompletedRoundIndex, setSelectedCompletedRoundIndex] =
+    useState<number | null>(null);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [isHandOrdered, setIsHandOrdered] = useState(false);
   const [revealedCompletedTrick, setRevealedCompletedTrick] =
     useState<TrickRevealState | null>(null);
+  const [copiedRoomCode, setCopiedRoomCode] = useState(false);
 
   const socketRef = useRef<GameSocket | null>(null);
   const trickRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const autoSummaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const copiedRoomCodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const previousGameStateRef = useRef<PublicGameView | null>(null);
 
   const clearTrickRevealTimeout = () => {
     if (!trickRevealTimeoutRef.current) {
@@ -159,6 +177,50 @@ export function GameClient() {
       setRevealedCompletedTrick(null);
       trickRevealTimeoutRef.current = null;
     }, TRICK_REVEAL_DURATION_MS);
+  };
+
+  const clearAutoSummaryTimeout = () => {
+    if (!autoSummaryTimeoutRef.current) {
+      return;
+    }
+    clearTimeout(autoSummaryTimeoutRef.current);
+    autoSummaryTimeoutRef.current = null;
+  };
+  const clearCopiedRoomCodeTimeout = () => {
+    if (!copiedRoomCodeTimeoutRef.current) {
+      return;
+    }
+    clearTimeout(copiedRoomCodeTimeoutRef.current);
+    copiedRoomCodeTimeoutRef.current = null;
+  };
+
+  const handleCopyRoomCode = async () => {
+    if (!session?.roomCode) {
+      return;
+    }
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(session.roomCode);
+      } else {
+        const fallbackInput = document.createElement("textarea");
+        fallbackInput.value = session.roomCode;
+        fallbackInput.setAttribute("readonly", "");
+        fallbackInput.style.position = "absolute";
+        fallbackInput.style.left = "-9999px";
+        document.body.appendChild(fallbackInput);
+        fallbackInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(fallbackInput);
+      }
+      setCopiedRoomCode(true);
+      clearCopiedRoomCodeTimeout();
+      copiedRoomCodeTimeoutRef.current = setTimeout(() => {
+        setCopiedRoomCode(false);
+        copiedRoomCodeTimeoutRef.current = null;
+      }, 1600);
+    } catch {
+      setError("Could not copy room code. Please copy it manually.");
+    }
   };
 
   useEffect(() => {
@@ -193,7 +255,23 @@ export function GameClient() {
       setError(null);
     });
     socket.on("game:state", (payload: PublicGameView) => {
+      const previousGameState = previousGameStateRef.current;
+      const previousCompletedRoundCount =
+        previousGameState?.completedRounds.length ?? payload.completedRounds.length;
+      const roundCompleted =
+        payload.completedRounds.length > previousCompletedRoundCount;
+      if (payload.phase === "game_complete") {
+        clearAutoSummaryTimeout();
+      } else if (roundCompleted) {
+        clearAutoSummaryTimeout();
+        const completedRoundIndex = payload.completedRounds.length - 1;
+        autoSummaryTimeoutRef.current = setTimeout(() => {
+          setSelectedCompletedRoundIndex(completedRoundIndex);
+          autoSummaryTimeoutRef.current = null;
+        }, AUTO_SUMMARY_DELAY_MS);
+      }
       setGameState(payload);
+      previousGameStateRef.current = payload;
       setError(null);
     });
     socket.on("game:trick_reveal", (payload: unknown) => {
@@ -214,6 +292,8 @@ export function GameClient() {
 
     return () => {
       clearTrickRevealTimeout();
+      clearAutoSummaryTimeout();
+      clearCopiedRoomCodeTimeout();
       socket.disconnect();
       socketRef.current = null;
     };
@@ -288,8 +368,13 @@ export function GameClient() {
     setInfo(null);
     setShowHowToPlay(false);
     setSelectedSummaryPlayerId(null);
+    setSelectedCompletedRoundIndex(null);
     setRevealedCompletedTrick(null);
+    setCopiedRoomCode(false);
+    previousGameStateRef.current = null;
     clearTrickRevealTimeout();
+    clearAutoSummaryTimeout();
+    clearCopiedRoomCodeTimeout();
   };
 
   const isHost = roomState?.hostPlayerId === session?.playerId;
@@ -297,8 +382,17 @@ export function GameClient() {
     isHost &&
     roomState &&
     roomState.players.length >= 2 &&
-    !roomState.locked &&
     !gameState;
+  const canEndGame =
+    isHost && gameState !== null && gameState.phase !== "game_complete";
+  const isMatchInProgress =
+    gameState !== null && gameState.phase !== "game_complete";
+  const gameStatusLabel = isMatchInProgress ? "Game in progress" : "Lobby open";
+  const roomLockLabel = roomState?.locked ? "Room locked" : "Room open";
+  const currentGamePlayerIds = useMemo(
+    () => new Set((gameState?.players ?? []).map((player) => player.playerId)),
+    [gameState?.players],
+  );
 
   const bidding =
     gameState?.phase === "bidding" ? gameState.currentRound : null;
@@ -313,6 +407,12 @@ export function GameClient() {
   const isTrickRevealActive = Boolean(revealedCompletedTrick);
   const isRoundTransitionRevealActive =
     isTrickRevealActive && gameState?.phase !== "trick_play";
+  const activeTurnPlayerId = isRoundTransitionRevealActive
+    ? null
+    : trickPlay?.turnPlayerId ?? bidding?.bidTurnPlayerId ?? null;
+  const isMyTurn = Boolean(
+    session?.playerId && activeTurnPlayerId === session.playerId,
+  );
   const handRound = isRoundTransitionRevealActive
     ? trickPlay
     : trickPlay ?? (bidding?.cardsDealt ? bidding : null);
@@ -329,6 +429,17 @@ export function GameClient() {
   );
   const getPlayerName = (playerId: string): string =>
     playerNameById[playerId] ?? playerId;
+  const turnPlayerName = activeTurnPlayerId
+    ? getPlayerName(activeTurnPlayerId)
+    : null;
+  const turnPromptText =
+    isMyTurn && trickPlay
+      ? "Play a legal card."
+      : isMyTurn && bidding
+        ? "Place your bid."
+        : turnPlayerName
+          ? `${turnPlayerName} is up.`
+          : null;
 
   const submitBid = (bid: number) => {
     socketRef.current?.emit("bid:submit", { bid });
@@ -373,9 +484,27 @@ export function GameClient() {
       .map((trick, index) => ({ ...trick, trickNumber: index + 1 }))
       .filter((trick) => trick.winnerId === selectedWinnerPlayerId);
   }, [currentRound, selectedWinnerPlayerId]);
+  const selectedCompletedRound: RoundSummary | null = useMemo(() => {
+    if (selectedCompletedRoundIndex === null || !gameState) {
+      return null;
+    }
+    return gameState.completedRounds[selectedCompletedRoundIndex] ?? null;
+  }, [gameState, selectedCompletedRoundIndex]);
   const trumpSuit = currentRound?.trumpSuit ?? null;
   const trumpPreviewCardId = trumpSuit ? `A${trumpSuit}` : null;
   const getTrumpSuitLabel = (suit: Suit): string => TRUMP_SUIT_LABEL[suit];
+  const getTrumpSuitDisplay = (suit: Suit): React.ReactNode => (
+    <>
+      {TRUMP_SUIT_LABEL[suit]}{" "}
+      <span
+        className={`suit-symbol ${
+          suit === "H" || suit === "D" ? "suit-symbol--red" : "suit-symbol--dark"
+        }`}
+      >
+        ({SUIT_SYMBOL[suit]})
+      </span>
+    </>
+  );
   const visibleHandCards = useMemo(() => {
     if (!handRound) {
       return [];
@@ -385,6 +514,19 @@ export function GameClient() {
     }
     return sortHandCards(handRound.viewerHand, handRound.trumpSuit);
   }, [handRound, isHandOrdered]);
+
+  useEffect(() => {
+    setIsHandOrdered(false);
+  }, [currentRound?.roundIndex]);
+
+  useEffect(() => {
+    document.title = isMyTurn
+      ? "Your turn • Kachuful"
+      : "Kachuful Multiplayer";
+    return () => {
+      document.title = "Kachuful Multiplayer";
+    };
+  }, [isMyTurn]);
 
   if (!session) {
     return (
@@ -426,10 +568,19 @@ export function GameClient() {
   return (
     <>
       <section>
-        <h2>
-          Room {session.roomCode}
-          <span className="pill">{session.name}</span>
-        </h2>
+        <div className="room-header">
+          <h2>Room {session.roomCode}</h2>
+          <button
+            aria-label="Copy room code"
+            className="secondary room-copy-button"
+            onClick={() => {
+              void handleCopyRoomCode();
+            }}
+            type="button"
+          >
+            {copiedRoomCode ? "Copied" : "Copy code"}
+          </button>
+        </div>
         <div className="row">
           <button
             className="secondary"
@@ -450,6 +601,29 @@ export function GameClient() {
           <button className="secondary" onClick={leaveSession} type="button">
             Leave
           </button>
+          {isHost && roomState ? (
+            <button
+              className="secondary"
+              onClick={() => {
+                socketRef.current?.emit("room:lock_toggle", {
+                  locked: !roomState.locked,
+                });
+              }}
+              type="button"
+            >
+              {roomState.locked ? "Unlock room" : "Lock room"}
+            </button>
+          ) : null}
+          {canEndGame ? (
+            <button
+              onClick={() => {
+                socketRef.current?.emit("game:end");
+              }}
+              type="button"
+            >
+              End game
+            </button>
+          ) : null}
           {canStart ? (
             <button
               onClick={() => {
@@ -461,22 +635,30 @@ export function GameClient() {
             </button>
           ) : null}
         </div>
-        <p>{roomState?.locked ? "Game in progress" : "Lobby open"}</p>
+        <p>
+          {gameStatusLabel}
+          {roomState ? ` • ${roomLockLabel}` : ""}
+        </p>
         {roomState ? (
           <div>
-            {roomState.players.map((player) => (
-              <p className="room-player" key={player.playerId}>
-                <span
-                  aria-label={`${player.name} ${player.connected ? "online" : "offline"}`}
-                  className={`status-dot ${player.connected ? "status-dot--online" : "status-dot--offline"}`}
-                  role="img"
-                />
-                <span>{player.name}</span>
-                {player.playerId === roomState.hostPlayerId ? (
-                  <span className="pill">host</span>
-                ) : null}
-              </p>
-            ))}
+            {roomState.players.map((player) => {
+              const isSpectator =
+                isMatchInProgress && !currentGamePlayerIds.has(player.playerId);
+              return (
+                <p className="room-player" key={player.playerId}>
+                  <span
+                    aria-label={`${player.name} ${player.connected ? "online" : "offline"}`}
+                    className={`status-dot ${player.connected ? "status-dot--online" : "status-dot--offline"}`}
+                    role="img"
+                  />
+                  <span>{player.name}</span>
+                  {player.playerId === roomState.hostPlayerId ? (
+                    <span className="pill">host</span>
+                  ) : null}
+                  {isSpectator ? <span className="pill">spectator</span> : null}
+                </p>
+              );
+            })}
           </div>
         ) : null}
         {info ? <p>{info}</p> : null}
@@ -488,21 +670,29 @@ export function GameClient() {
           <div className="game-layout">
             <div className="game-main">
               <h2>Game</h2>
-              <p>Phase: {getPhaseLabel(gameState.phase)}</p>
               <p>Round: {visibleRoundNumber}</p>
+              {activeTurnPlayerId && turnPromptText ? (
+                <div
+                  aria-live="polite"
+                  className={`turn-banner ${
+                    isMyTurn ? "turn-banner--self" : "turn-banner--waiting"
+                  }`}
+                  role="status"
+                >
+                  <span className="turn-banner__label">
+                    {isMyTurn ? "Your turn" : "Current turn"}
+                  </span>
+                  <span className="turn-banner__text">{turnPromptText}</span>
+                </div>
+              ) : null}
 
               {bidding && !isRoundTransitionRevealActive ? (
                 <div>
-                  <p>
-                    Turn:{" "}
-                    {bidding.bidTurnPlayerId
-                      ? getPlayerName(bidding.bidTurnPlayerId)
-                      : "-"}
-                  </p>
                   {isBidTurn ? (
-                    <div className="row">
+                    <div className="row turn-actions turn-actions--active">
                       {bidValues(bidding.cardsPerPlayer).map((bid) => (
                         <button
+                          className="turn-actions__button"
                           key={bid}
                           onClick={() => submitBid(bid)}
                           type="button"
@@ -525,18 +715,8 @@ export function GameClient() {
 
               {trickPlay || isTrickRevealActive ? (
                 <div>
-                  {trickPlay ? (
-                    <p>
-                      Turn:{" "}
-                      {trickPlay.turnPlayerId
-                        ? getPlayerName(trickPlay.turnPlayerId)
-                        : "-"}
-                    </p>
-                  ) : null}
                   <div>
-                    <p>
-                      {isTrickRevealActive ? "Last trick" : "Current trick"}
-                    </p>
+                    <p>Cards on table</p>
                     <div className="cards">
                       {displayTrickCards.map((play) => (
                         <span
@@ -572,17 +752,22 @@ export function GameClient() {
                   </div>
                   <div className="cards">
                     {visibleHandCards.map((cardId) => {
-                      const canPlay = Boolean(
+                      const isLegalPlay = Boolean(
                         trickPlay &&
                         isPlayTurn &&
                         !isTrickRevealActive &&
                         trickPlay.legalCardIds.includes(cardId),
                       );
+                      const shouldDimCard = Boolean(
+                        trickPlay && !isPlayTurn && !isTrickRevealActive,
+                      );
                       return (
                         <button
                           aria-label={cardId}
-                          className="card-button"
-                          disabled={!canPlay}
+                          className={`card-button${
+                            isLegalPlay ? " card-button--turn-legal" : ""
+                          }${shouldDimCard ? " card-button--waiting" : ""}`}
+                          disabled={!isLegalPlay}
                           key={cardId}
                           onClick={() => playCard(cardId)}
                           title={cardId}
@@ -729,20 +914,51 @@ export function GameClient() {
               {currentRound ? (
                 <div className="round-stats__list">
                   {gameState.players.map((player) => {
-                    const bid = currentRound.bids[player.playerId];
+                    const bidRaw = currentRound.bids[player.playerId];
+                    const bid = typeof bidRaw === "number" ? bidRaw : null;
                     const won = currentRound.tricksWon[player.playerId] ?? 0;
                     const isSelf = session?.playerId === player.playerId;
+                    const isActiveTurn = activeTurnPlayerId === player.playerId;
+                    const handsNeeded = bid === null ? 0 : bid - won;
+                    const handsNeededText =
+                      bid === null
+                        ? "-"
+                        : handsNeeded > 0
+                          ? `Need ${handsNeeded}`
+                          : handsNeeded < 0
+                            ? `Over by ${Math.abs(handsNeeded)}`
+                            : "On target";
+                    const handsNeededClass =
+                      bid === null
+                        ? "round-stats__needed--unknown"
+                        : handsNeeded > 0
+                          ? "round-stats__needed--need"
+                          : handsNeeded < 0
+                            ? "round-stats__needed--over"
+                            : "round-stats__needed--on-target";
                     const wonCount = currentRound.trickHistory.filter(
                       (trick) => trick.winnerId === player.playerId,
                     ).length;
                     return (
                       <div
-                        className={`round-stats__row${isSelf ? " round-stats__row--self" : ""}`}
+                        className={`round-stats__row${isSelf ? " round-stats__row--self" : ""}${
+                          isActiveTurn ? " round-stats__row--active-turn" : ""
+                        }`}
                         key={player.playerId}
                       >
-                        <p className="round-stats__name">{player.name}</p>
+                        <div className="round-stats__name-row">
+                          <p className="round-stats__name">{player.name}</p>
+                          {isActiveTurn ? (
+                            <span className="pill round-stats__turn-pill">
+                              Playing now
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="round-stats__meta">Bid: {bid ?? "-"}</p>
                         <p className="round-stats__meta">Won: {won}</p>
+                        <p className={`round-stats__needed ${handsNeededClass}`}>
+                          Hands needed: {handsNeededText}
+                        </p>
                         <button
                           aria-label={`View winning tricks for ${player.name}`}
                           className="secondary round-stats__button"
@@ -832,6 +1048,79 @@ export function GameClient() {
         </div>
       ) : null}
 
+      {selectedCompletedRound && gameState ? (
+        <div
+          className="modal-backdrop"
+          onClick={() => setSelectedCompletedRoundIndex(null)}
+          role="presentation"
+        >
+          <div
+            aria-modal="true"
+            className="modal-card"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="modal-card__header">
+              <h3>Round {selectedCompletedRound.roundIndex + 1} Summary</h3>
+              <button
+                className="secondary"
+                onClick={() => setSelectedCompletedRoundIndex(null)}
+                type="button"
+              >
+                Close
+              </button>
+            </div>
+            <p>
+              Cards: {selectedCompletedRound.cardsPerPlayer} | Trump:{" "}
+              {getTrumpSuitDisplay(selectedCompletedRound.trumpSuit)}
+            </p>
+            <table className="summary-table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Bid</th>
+                  <th>Won</th>
+                  <th>Result</th>
+                  <th>Round Points</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gameState.players.map((player) => {
+                  const playerId = player.playerId;
+                  const bid = selectedCompletedRound.bids[playerId] ?? 0;
+                  const won = selectedCompletedRound.tricksWon[playerId] ?? 0;
+                  const points =
+                    selectedCompletedRound.scoreDelta[playerId] ?? 0;
+                  const total = gameState.scores[playerId] ?? 0;
+                  const hit = bid === won;
+                  return (
+                    <tr key={`round-summary-${selectedCompletedRound.roundIndex}-${playerId}`}>
+                      <td>{player.name}</td>
+                      <td>{bid}</td>
+                      <td>{won}</td>
+                      <td>
+                        <span
+                          aria-label={hit ? "Hit" : "Miss"}
+                          className={`summary-result ${
+                            hit ? "summary-result--hit" : "summary-result--miss"
+                          }`}
+                          title={hit ? "Hit" : "Miss"}
+                        >
+                          {hit ? "✓" : "✗"}
+                        </span>
+                      </td>
+                      <td>{points > 0 ? `+${points}` : `${points}`}</td>
+                      <td>{total}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
       {selectedSummaryPlayerId && gameState ? (
         <div
           className="modal-backdrop"
@@ -878,10 +1167,20 @@ export function GameClient() {
                       key={`summary-${selectedSummaryPlayerId}-${round.roundIndex}`}
                     >
                       <td>{round.roundIndex + 1}</td>
-                      <td>{getTrumpSuitLabel(round.trumpSuit)}</td>
+                      <td>{getTrumpSuitDisplay(round.trumpSuit)}</td>
                       <td>{bid}</td>
                       <td>{won}</td>
-                      <td>{hit ? "Hit" : "Miss"}</td>
+                      <td>
+                        <span
+                          aria-label={hit ? "Hit" : "Miss"}
+                          className={`summary-result ${
+                            hit ? "summary-result--hit" : "summary-result--miss"
+                          }`}
+                          title={hit ? "Hit" : "Miss"}
+                        >
+                          {hit ? "✓" : "✗"}
+                        </span>
+                      </td>
                       <td>{points > 0 ? `+${points}` : `${points}`}</td>
                     </tr>
                   );
@@ -937,13 +1236,17 @@ export function GameClient() {
               <ul className="howto-list">
                 <li>Create room: create a new private room code.</li>
                 <li>Join room: join an existing room code.</li>
-                <li>Start game: host only, requires at least 2 players.</li>
+                <li>Copy code: copy the room code to clipboard.</li>
+                <li>Lock room / Unlock room: host controls who can newly join by name.</li>
+                <li>Start game: host only, requires at least 2 players in room.</li>
+                <li>End game: host can finish the current match early.</li>
                 <li>Bid X: submit your bid for the round.</li>
                 <li>Order hand: sort your cards with trump first.</li>
                 <li>Winning tricks: open tricks won by that player this round.</li>
                 <li>Round summary: open that player’s round-by-round results.</li>
                 <li>Sync state: re-fetch latest room and game state.</li>
                 <li>Leave: leave the room on this device.</li>
+                <li>Spectator tag: player joined mid-match and will be auto-added next game.</li>
               </ul>
             </div>
           </div>

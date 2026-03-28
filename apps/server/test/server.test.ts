@@ -134,6 +134,150 @@ describe("server integration", () => {
     expect(room?.players.map((player) => player.name)).toEqual(["Host", "Guest"]);
   });
 
+  it("allows HTTP rejoin for same-name offline player in locked room", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+    await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
+
+    hostSocket.emit("game:start");
+    await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    await new Promise<void>((resolve) => {
+      guestSocket.once("disconnect", () => resolve());
+      guestSocket.disconnect();
+    });
+
+    const rejoin = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    expect(rejoin.playerId).toBe(guest.playerId);
+    expect(rejoin.sessionToken).not.toBe(guest.sessionToken);
+  });
+
+  it("lets host toggle room lock and rejects non-host toggles", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+    await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
+
+    hostSocket.emit("room:lock_toggle", { locked: true });
+    const [hostLockedState, guestLockedState] = await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
+    expect(hostLockedState.locked).toBe(true);
+    expect(guestLockedState.locked).toBe(true);
+
+    guestSocket.emit("room:lock_toggle", { locked: false });
+    const gameError = await waitForEvent<{ code: string; message: string }>(guestSocket, "game:error");
+    expect(gameError.code).toBe("FORBIDDEN");
+  });
+
+  it("adds new joiners as spectators during active match and includes them next game", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+    await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
+
+    hostSocket.emit("game:start");
+    await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    const spectator = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Spectator" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const spectatorSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(spectatorSocket);
+    await waitForConnect(spectatorSocket);
+    const spectatorRoomStatePromise = waitForEvent<RoomStatePayload>(spectatorSocket, "room:state");
+    const spectatorGameViewPromise = waitForEvent<PublicGameView>(spectatorSocket, "game:state");
+    spectatorSocket.emit("room:join", spectator);
+
+    const spectatorRoomState = await spectatorRoomStatePromise;
+    const spectatorGameView = await spectatorGameViewPromise;
+    expect(spectatorRoomState.players.map((player) => player.name)).toEqual(["Host", "Guest", "Spectator"]);
+    expect(spectatorGameView.players.map((player) => player.name)).toEqual(["Host", "Guest"]);
+
+    const hostEndedGameViewPromise = waitForEvent<PublicGameView>(hostSocket, "game:state");
+    const guestEndedGameViewPromise = waitForEvent<PublicGameView>(guestSocket, "game:state");
+    const spectatorEndedGameViewPromise = waitForEvent<PublicGameView>(spectatorSocket, "game:state");
+    hostSocket.emit("game:end");
+    await Promise.all([
+      hostEndedGameViewPromise,
+      guestEndedGameViewPromise,
+      spectatorEndedGameViewPromise
+    ]);
+
+    const spectatorRestartedViewPromise = waitForEvent<PublicGameView>(spectatorSocket, "game:state");
+    hostSocket.emit("game:restart");
+    const spectatorRestartedView = await spectatorRestartedViewPromise;
+    expect(spectatorRestartedView.phase).toBe("bidding");
+    expect(spectatorRestartedView.players.map((player) => player.name)).toEqual([
+      "Host",
+      "Guest",
+      "Spectator"
+    ]);
+  });
+
   it("rejects joining with an already-online name", async () => {
     const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
     const guest = (
@@ -342,6 +486,77 @@ describe("server integration", () => {
     ]);
 
     guestSocket.emit("game:restart");
+    const gameError = await waitForEvent<{ code: string; message: string }>(guestSocket, "game:error");
+    expect(gameError.code).toBe("FORBIDDEN");
+  });
+
+  it("allows host to end an active game early", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+    await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
+
+    hostSocket.emit("game:start");
+    await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    hostSocket.emit("game:end");
+    const [hostEndedState, guestEndedState] = await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    expect(hostEndedState.phase).toBe("game_complete");
+    expect(hostEndedState.currentRound).toBeNull();
+    expect(guestEndedState.phase).toBe("game_complete");
+    expect(guestEndedState.currentRound).toBeNull();
+  });
+
+  it("rejects non-host end-game attempts", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+    await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
+
+    hostSocket.emit("game:start");
+    await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    guestSocket.emit("game:end");
     const gameError = await waitForEvent<{ code: string; message: string }>(guestSocket, "game:error");
     expect(gameError.code).toBe("FORBIDDEN");
   });

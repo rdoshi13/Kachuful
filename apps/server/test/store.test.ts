@@ -26,4 +26,26 @@ describe("RoomStore join behavior", () => {
       "Name is already in use"
     );
   });
+
+  it("allows same-name offline seat reclaim even when room is locked", () => {
+    const store = new RoomStore();
+    const created = store.createRoom("Host");
+    const guest = store.joinRoom(created.room.roomCode, "Guest");
+
+    store.setRoomLocked(created.room.roomCode, true);
+
+    const reclaimed = store.joinRoom(created.room.roomCode, "Guest");
+    expect(reclaimed.response.playerId).toBe(guest.response.playerId);
+    expect(reclaimed.response.sessionToken).not.toBe(guest.response.sessionToken);
+  });
+
+  it("rejects new-player join when room is locked", () => {
+    const store = new RoomStore();
+    const created = store.createRoom("Host");
+    store.setRoomLocked(created.room.roomCode, true);
+
+    expect(() => store.joinRoom(created.room.roomCode, "Guest")).toThrow(
+      "Room is locked"
+    );
+  });
 });

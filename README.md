@@ -9,7 +9,8 @@ Live app:
 ## Tech Stack
 
 - Frontend: Next.js + React + TypeScript
-- Backend (prod): Cloudflare Worker + Durable Objects + WebSocket
+- Frontend hosting (prod): Vercel (`play.rishabhdoshi.me`)
+- Backend (prod): Cloudflare Worker + WebSocket bridge
 - Backend (local): Node.js + Express + Socket.IO
 - Shared game logic: pure TypeScript reducer engine
 - Monorepo: pnpm workspaces
@@ -17,8 +18,10 @@ Live app:
 ## Features Implemented
 
 - Room create/join flow with room code
+- Room code copy button in header
 - Server-authoritative multiplayer
 - Reconnect support on refresh (same device/session)
+- Locked-room same-name seat reclaim for disconnected players
 - Deterministic game engine with tests
 - Round flow: `1 -> 2 -> ... -> 8 -> ... -> 1`
 - Trump suit rotation: `Spades -> Diamonds -> Clubs -> Hearts`
@@ -26,7 +29,12 @@ Live app:
 - Blind 1-card rounds
 - Follow-suit enforcement
 - Trick winner resolution with trump support
+- Host controls: start game, end game early, lock/unlock room
+- Spectator joins during active match (when room is unlocked)
+- Spectators are auto-included on next game start/restart
 - Round tracker and scoreboard UI
+- Hands-needed indicator and turn callout
+- Round summary modals (per-player and auto end-of-round all-player summary)
 - Match history persistence
 - 6-player short-deck handling (all `2`s removed)
 

@@ -168,7 +168,6 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
     }
 
     store.setGameState(room.roomCode, started.state);
-    store.lockRoom(room.roomCode);
     broadcastRoomState(room.roomCode);
     broadcastGameState(room.roomCode);
   };
@@ -230,6 +229,29 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
       startRoomGame(room.roomCode, identity.playerId, socket);
     });
 
+    socket.on("room:lock_toggle", (payload?: { locked?: boolean }) => {
+      const identity = store.getIdentityBySocket(socket.id);
+      if (!identity) {
+        emitGameError(socket, "Join room first", "NOT_JOINED");
+        return;
+      }
+
+      const room = store.getRoom(identity.roomCode);
+      if (!room) {
+        emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+        return;
+      }
+      if (room.hostPlayerId !== identity.playerId) {
+        emitGameError(socket, "Only host can change room lock", "FORBIDDEN");
+        return;
+      }
+
+      const nextLocked =
+        typeof payload?.locked === "boolean" ? payload.locked : !room.locked;
+      store.setRoomLocked(room.roomCode, nextLocked);
+      broadcastRoomState(room.roomCode);
+    });
+
     socket.on("game:restart", () => {
       const identity = store.getIdentityBySocket(socket.id);
       if (!identity) {
@@ -256,6 +278,42 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
       }
 
       startRoomGame(room.roomCode, identity.playerId, socket);
+    });
+
+    socket.on("game:end", () => {
+      const identity = store.getIdentityBySocket(socket.id);
+      if (!identity) {
+        emitGameError(socket, "Join room first", "NOT_JOINED");
+        return;
+      }
+
+      const room = store.getRoom(identity.roomCode);
+      if (!room) {
+        emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+        return;
+      }
+      if (room.hostPlayerId !== identity.playerId) {
+        emitGameError(socket, "Only host can end game", "FORBIDDEN");
+        return;
+      }
+      if (!room.gameState) {
+        emitGameError(socket, "No game to end", "NO_ACTIVE_GAME");
+        return;
+      }
+      if (room.gameState.phase === "game_complete") {
+        emitGameError(socket, "Game already complete", "GAME_ALREADY_COMPLETE");
+        return;
+      }
+
+      const endedState = {
+        ...room.gameState,
+        phase: "game_complete" as const,
+        currentRound: null,
+        updatedAt: Date.now()
+      };
+      store.setGameState(room.roomCode, endedState);
+      historyStore.recordCompletedGame(room.roomCode, endedState);
+      broadcastGameState(room.roomCode);
     });
 
     socket.on("bid:submit", (payload: { bid: number }) => {

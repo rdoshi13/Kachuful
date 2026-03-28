@@ -73,9 +73,6 @@ export class RoomStore {
     if (!room) {
       throw new Error("Room not found");
     }
-    if (room.locked) {
-      throw new Error("Room is locked");
-    }
 
     const cleanName = sanitizeName(name);
     if (!cleanName) {
@@ -85,6 +82,26 @@ export class RoomStore {
     const existingPlayer = room.players.find(
       (player) => normalizeName(player.name) === normalizeName(cleanName)
     );
+
+    if (room.locked) {
+      if (!existingPlayer) {
+        throw new Error("Room is locked");
+      }
+      if (existingPlayer.connected) {
+        throw new Error("Name is already in use");
+      }
+
+      existingPlayer.sessionToken = randomUUID();
+      return {
+        room,
+        response: {
+          roomCode: room.roomCode,
+          playerId: existingPlayer.playerId,
+          sessionToken: existingPlayer.sessionToken
+        }
+      };
+    }
+
     if (existingPlayer) {
       if (existingPlayer.connected) {
         throw new Error("Name is already in use");
@@ -210,12 +227,12 @@ export class RoomStore {
     room.gameState = gameState;
   }
 
-  lockRoom(roomCode: string): void {
+  setRoomLocked(roomCode: string, locked: boolean): void {
     const room = this.getRoom(roomCode);
     if (!room) {
       throw new Error("Room not found");
     }
-    room.locked = true;
+    room.locked = locked;
   }
 
   getRoomStatePayload(roomCode: string): RoomStatePayload {

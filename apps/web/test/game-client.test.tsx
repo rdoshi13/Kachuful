@@ -131,6 +131,197 @@ describe("GameClient", () => {
     expect(await screen.findByRole("button", { name: "Start game" })).toBeInTheDocument();
   });
 
+  it("copies room code to clipboard from room header button", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Copy room code" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("ROOM01");
+    });
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
+  });
+
+  it("shows host end game button during active game and emits game:end", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: true,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: true },
+      ],
+    });
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "bidding",
+      scores: { p1: 0, p2: 0 },
+      roundNumber: 0,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 0,
+        cardsPerPlayer: 1,
+        trumpSuit: "S",
+        dealerIndex: 0,
+        blind: true,
+        cardsDealt: false,
+        bids: { p1: null, p2: null },
+        bidTurnPlayerId: "p1",
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p2",
+        turnPlayerId: "p2",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 0, p2: 0 },
+        viewerHand: [],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "End game" }));
+    const endEvent = lastSocket?.emitted.find((entry) => entry.event === "game:end");
+    expect(endEvent).toBeTruthy();
+  });
+
+  it("shows host lock toggle and emits room:lock_toggle", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: false,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: true },
+      ],
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Lock room" }));
+    const lockEvent = lastSocket?.emitted.find((entry) => entry.event === "room:lock_toggle");
+    expect(lockEvent?.payload).toEqual({ locked: true });
+
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: true,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: true },
+      ],
+    });
+
+    expect(await screen.findByRole("button", { name: "Unlock room" })).toBeInTheDocument();
+  });
+
+  it("shows spectator label for players not in current active game", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: false,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: true },
+        { playerId: "p3", name: "Spectator", connected: true },
+      ],
+    });
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "trick_play",
+      scores: { p1: 0, p2: 0 },
+      roundNumber: 0,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 0,
+        cardsPerPlayer: 1,
+        trumpSuit: "S",
+        dealerIndex: 0,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: 0, p2: 1 },
+        bidTurnPlayerId: null,
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p1",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 1, p2: 1 },
+        viewerHand: [],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    expect(await screen.findByText("spectator")).toBeInTheDocument();
+  });
+
   it("renders online/offline status dots", async () => {
     localStorage.setItem(
       "kachuful:session",
@@ -248,6 +439,8 @@ describe("GameClient", () => {
       },
     });
 
+    expect(await screen.findByText("Your turn")).toBeInTheDocument();
+    expect(await screen.findByText("Place your bid.")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Bid 0" })).toBeEnabled();
     expect(await screen.findByRole("button", { name: "Bid 1" })).toBeDisabled();
   });
@@ -416,6 +609,108 @@ describe("GameClient", () => {
     expect(orderedCards).toEqual(["AD", "2D", "5S", "KH", "3C"]);
   });
 
+  it("resets ordered hand preference when a new round starts", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "bidding",
+      scores: { p1: 0, p2: 0 },
+      roundNumber: 1,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 1,
+        cardsPerPlayer: 5,
+        trumpSuit: "D",
+        dealerIndex: 1,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: null, p2: null },
+        bidTurnPlayerId: "p1",
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p1",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 5, p2: 5 },
+        viewerHand: ["3C", "2D", "5S", "KH", "AD"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Order hand" }));
+
+    const orderedRoundOne = Array.from(
+      document.querySelectorAll("button.card-button"),
+    ).map((element) => element.getAttribute("aria-label"));
+    expect(orderedRoundOne).toEqual(["AD", "2D", "5S", "KH", "3C"]);
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "bidding",
+      scores: { p1: 11, p2: 0 },
+      roundNumber: 2,
+      completedRounds: [
+        {
+          roundIndex: 1,
+          cardsPerPlayer: 5,
+          trumpSuit: "D",
+          bids: { p1: 2, p2: 2 },
+          tricksWon: { p1: 2, p2: 3 },
+          scoreDelta: { p1: 12, p2: 0 },
+        },
+      ],
+      currentRound: {
+        roundIndex: 2,
+        cardsPerPlayer: 3,
+        trumpSuit: "H",
+        dealerIndex: 0,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: null, p2: null },
+        bidTurnPlayerId: "p2",
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p2",
+        turnPlayerId: "p2",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 3, p2: 3 },
+        viewerHand: ["4C", "2H", "AS"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    await screen.findByRole("button", { name: "4C" });
+
+    const roundTwoCards = Array.from(
+      document.querySelectorAll("button.card-button"),
+    ).map((element) => element.getAttribute("aria-label"));
+    expect(roundTwoCards).toEqual(["4C", "2H", "AS"]);
+  });
+
   it("shows round tracker and opens winning tricks modal", async () => {
     localStorage.setItem(
       "kachuful:session",
@@ -473,6 +768,8 @@ describe("GameClient", () => {
     });
 
     expect(await screen.findByText("Round Tracker")).toBeInTheDocument();
+    expect(await screen.findByText("Current turn")).toBeInTheDocument();
+    expect(await screen.findByText("Guest is up.")).toBeInTheDocument();
     expect(await screen.findByText("Bid: 1")).toBeInTheDocument();
     expect(await screen.findByText("Won: 1")).toBeInTheDocument();
     const hostWinningButton = await screen.findByRole("button", {
@@ -480,6 +777,13 @@ describe("GameClient", () => {
     });
     const hostRow = hostWinningButton.closest(".round-stats__row");
     expect(hostRow).toHaveClass("round-stats__row--self");
+    expect(hostRow).toHaveTextContent("Hands needed: On target");
+    expect(await screen.findByText("Playing now")).toBeInTheDocument();
+    const guestWinningButton = await screen.findByRole("button", {
+      name: "View winning tricks for Guest",
+    });
+    const guestRow = guestWinningButton.closest(".round-stats__row");
+    expect(guestRow).toHaveClass("round-stats__row--active-turn");
 
     fireEvent.click(
       hostWinningButton,
@@ -538,7 +842,7 @@ describe("GameClient", () => {
       },
     });
 
-    expect(screen.queryByText("Last trick")).not.toBeInTheDocument();
+    expect(screen.queryByText("Cards on table")).not.toBeInTheDocument();
 
     lastSocket?.trigger("game:trick_reveal", {
       winnerId: "p3",
@@ -553,7 +857,7 @@ describe("GameClient", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Last trick")).toBeInTheDocument();
+      expect(screen.getByText("Cards on table")).toBeInTheDocument();
       expect(document.querySelectorAll(".trick-card")).toHaveLength(3);
     });
     expect(document.querySelectorAll(".trick-card--winner")).toHaveLength(1);
@@ -696,10 +1000,196 @@ describe("GameClient", () => {
 
     expect(await screen.findByText("Host Round-by-Round Summary")).toBeInTheDocument();
     expect(await screen.findByText("Round Points")).toBeInTheDocument();
-    expect(await screen.findByText("Spades")).toBeInTheDocument();
-    expect(await screen.findByText("Diamonds")).toBeInTheDocument();
+    expect(
+      await screen.findByText((_, element) =>
+        element?.textContent?.trim() === "Spades (♠)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText((_, element) =>
+        element?.textContent?.trim() === "Diamonds (♦)",
+      ),
+    ).toBeInTheDocument();
     expect(await screen.findByText("+11")).toBeInTheDocument();
-    expect(await screen.findByText("Miss")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Miss")).toBeInTheDocument();
+  });
+
+  it("auto-opens round summary when a round completes and game continues", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "trick_play",
+      scores: { p1: 0, p2: 0 },
+      roundNumber: 0,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 0,
+        cardsPerPlayer: 1,
+        trumpSuit: "S",
+        dealerIndex: 0,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: 1, p2: 0 },
+        bidTurnPlayerId: null,
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p1",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 1, p2: 1 },
+        viewerHand: ["AS"],
+        forbiddenDealerBid: null,
+        legalCardIds: ["AS"],
+      },
+    });
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "bidding",
+      scores: { p1: 11, p2: 0 },
+      roundNumber: 1,
+      completedRounds: [
+        {
+          roundIndex: 0,
+          cardsPerPlayer: 1,
+          trumpSuit: "S",
+          bids: { p1: 1, p2: 0 },
+          tricksWon: { p1: 1, p2: 0 },
+          scoreDelta: { p1: 11, p2: 0 },
+        },
+      ],
+      currentRound: {
+        roundIndex: 1,
+        cardsPerPlayer: 2,
+        trumpSuit: "D",
+        dealerIndex: 1,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: null, p2: null },
+        bidTurnPlayerId: "p1",
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p1",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 2, p2: 2 },
+        viewerHand: ["3H", "4C"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    expect(screen.queryByText("Round 1 Summary")).not.toBeInTheDocument();
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2100);
+    });
+
+    expect(await screen.findByText("Round 1 Summary")).toBeInTheDocument();
+    expect(
+      await screen.findByText((_, element) =>
+        element?.textContent?.replace(/\s+/g, " ").trim() ===
+        "Cards: 1 | Trump: Spades (♠)",
+      ),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Total")).toBeInTheDocument();
+    expect(await screen.findByText("Round Points")).toBeInTheDocument();
+    expect(await screen.findByText("+11")).toBeInTheDocument();
+  });
+
+  it("does not auto-open round summary when game reaches final game_complete phase", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "trick_play",
+      scores: { p1: 80, p2: 72 },
+      roundNumber: 14,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 14,
+        cardsPerPlayer: 1,
+        trumpSuit: "C",
+        dealerIndex: 0,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: 0, p2: 1 },
+        bidTurnPlayerId: null,
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p2",
+        turnPlayerId: "p2",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 1, p2: 1 },
+        viewerHand: ["3C"],
+        forbiddenDealerBid: null,
+        legalCardIds: ["3C"],
+      },
+    });
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "game_complete",
+      scores: { p1: 91, p2: 72 },
+      roundNumber: 14,
+      completedRounds: [
+        {
+          roundIndex: 14,
+          cardsPerPlayer: 1,
+          trumpSuit: "C",
+          bids: { p1: 0, p2: 1 },
+          tricksWon: { p1: 0, p2: 1 },
+          scoreDelta: { p1: 0, p2: 11 },
+        },
+      ],
+      currentRound: null,
+    });
+
+    expect(await screen.findByText("Game Complete")).toBeInTheDocument();
+    expect(screen.queryByText("Round 15 Summary")).not.toBeInTheDocument();
   });
 
   it("shows game complete panel with winners and round breakdown", async () => {
