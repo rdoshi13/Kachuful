@@ -462,7 +462,7 @@ describe("GameClient", () => {
     expect(await screen.findByText("Trick 1")).toBeInTheDocument();
   });
 
-  it("shows last trick for 1 second across round transition and highlights winner", async () => {
+  it("shows last trick for 2 seconds across round transition and highlights winner", async () => {
     localStorage.setItem(
       "kachuful:session",
       JSON.stringify({
@@ -531,9 +531,11 @@ describe("GameClient", () => {
     expect(document.querySelectorAll(".trick-card--winner")).toHaveLength(1);
 
     await new Promise((resolve) => {
-      setTimeout(resolve, 1100);
+      setTimeout(resolve, 2100);
     });
-    expect(document.querySelectorAll(".trick-card")).toHaveLength(0);
+    await waitFor(() => {
+      expect(document.querySelectorAll(".trick-card")).toHaveLength(0);
+    });
   });
 
   it("shows trump suit label, trump preview, and cards-per-round info", async () => {
