@@ -93,6 +93,44 @@ describe("GameClient", () => {
     });
   });
 
+  it("shows start game only when at least two players are in the room", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: false,
+      players: [{ playerId: "p1", name: "Host", connected: true }],
+    });
+
+    expect(screen.queryByRole("button", { name: "Start game" })).toBeNull();
+
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: false,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: true },
+      ],
+    });
+
+    expect(await screen.findByRole("button", { name: "Start game" })).toBeInTheDocument();
+  });
+
   it("disables compulsory dealer bid in bidding UI", async () => {
     localStorage.setItem(
       "kachuful:session",

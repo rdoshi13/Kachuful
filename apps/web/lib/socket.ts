@@ -1,7 +1,10 @@
+import { io, type Socket as IOSocket } from "socket.io-client";
+
 type EventHandler = (payload?: unknown) => void;
 
 const DEFAULT_HTTP_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
 const DEFAULT_SOCKET_BASE = process.env.NEXT_PUBLIC_SOCKET_URL ?? DEFAULT_HTTP_BASE;
+const SOCKET_TRANSPORT_MODE = process.env.NEXT_PUBLIC_SOCKET_TRANSPORT ?? "auto";
 
 const toWebSocketUrl = (value: string): string => {
   if (value.startsWith("ws://") || value.startsWith("wss://")) {
@@ -27,6 +30,24 @@ export interface GameSocket {
   on<T = unknown>(event: string, handler: (payload: T) => void): GameSocket;
   emit(event: string, payload?: unknown): boolean;
   disconnect(): void;
+}
+
+class SocketIoGameSocket implements GameSocket {
+  constructor(private readonly socket: IOSocket) {}
+
+  on<T = unknown>(event: string, handler: (payload: T) => void): GameSocket {
+    this.socket.on(event, handler as (payload?: unknown) => void);
+    return this;
+  }
+
+  emit(event: string, payload?: unknown): boolean {
+    this.socket.emit(event, payload);
+    return true;
+  }
+
+  disconnect(): void {
+    this.socket.disconnect();
+  }
 }
 
 class BrowserGameSocket implements GameSocket {
@@ -111,4 +132,35 @@ class BrowserGameSocket implements GameSocket {
   }
 }
 
-export const createGameSocket = (): GameSocket => new BrowserGameSocket(SOCKET_URL);
+const shouldUseSocketIo = (baseUrl: string): boolean => {
+  if (SOCKET_TRANSPORT_MODE === "socketio") {
+    return true;
+  }
+  if (SOCKET_TRANSPORT_MODE === "ws") {
+    return false;
+  }
+
+  try {
+    const normalized = baseUrl.startsWith("http://") || baseUrl.startsWith("https://")
+      ? baseUrl
+      : `http://${baseUrl}`;
+    const parsed = new URL(normalized);
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+};
+
+export const createGameSocket = (): GameSocket => {
+  if (shouldUseSocketIo(DEFAULT_SOCKET_BASE)) {
+    return new SocketIoGameSocket(
+      io(DEFAULT_SOCKET_BASE, {
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionAttempts: 8,
+        reconnectionDelay: 400
+      })
+    );
+  }
+  return new BrowserGameSocket(SOCKET_URL);
+};

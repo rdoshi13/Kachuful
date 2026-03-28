@@ -142,7 +142,12 @@ export function GameClient() {
   };
 
   const isHost = roomState?.hostPlayerId === session?.playerId;
-  const canStart = isHost && roomState && !roomState.locked && !gameState;
+  const canStart =
+    isHost &&
+    roomState &&
+    roomState.players.length >= 2 &&
+    !roomState.locked &&
+    !gameState;
 
   const bidding =
     gameState?.phase === "bidding" ? gameState.currentRound : null;

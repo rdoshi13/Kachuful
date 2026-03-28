@@ -19,6 +19,15 @@ import { getCardRank, getCardSuit, getDeck, hasSuit, shuffleWithSeed } from "./c
 
 const now = (): number => Date.now();
 
+const createRandomSeed = (): number => {
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const values = new Uint32Array(1);
+    crypto.getRandomValues(values);
+    return values[0] ?? 0;
+  }
+  return Math.floor(Math.random() * 0x100000000);
+};
+
 const ok = (state: GameState, events: EngineEvent[]): EngineResult => ({ ok: true, state, events });
 
 const fail = (state: GameState, code: string, message: string): EngineResult => ({
@@ -257,7 +266,7 @@ export const createGame = (params: {
     scores: Object.fromEntries(params.players.map((player) => [player.playerId, 0])),
     roundNumber: -1,
     dealerIndex: params.players.length - 1,
-    rngSeed: params.seed ?? 123456789,
+    rngSeed: params.seed ?? createRandomSeed(),
     currentRound: null,
     completedRounds: [],
     startedAt: null,
