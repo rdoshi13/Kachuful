@@ -1,9 +1,17 @@
-name: Deploy Cloudflare
+name: Deploy Cloudflare Backend
 
 on:
   push:
     branches:
       - main
+    paths:
+      - apps/cloudflare-server/**
+      - packages/game-engine/**
+      - packages/shared-types/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/deploy-cloudflare.yml
   workflow_dispatch:
 
 jobs:
@@ -12,8 +20,6 @@ jobs:
     permissions:
       contents: read
     env:
-      NEXT_PUBLIC_API_BASE: https://kachuful-server.rdoshi13.workers.dev
-      NEXT_PUBLIC_SOCKET_URL: https://kachuful-server.rdoshi13.workers.dev
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
@@ -37,15 +43,8 @@ jobs:
       - name: Typecheck
         run: pnpm check
 
-      - name: Run web tests
-        run: pnpm --filter @kachuful/web test
-
-      - name: Build web static output
-        run: pnpm --filter @kachuful/web build
-
-      - name: Deploy kachuful-server (API + web assets)
+      - name: Deploy kachuful-server (API only)
         run: >
           pnpm --filter @kachuful/cloudflare-server exec wrangler deploy
           --name kachuful-server
           --compatibility-date 2026-03-27
-          --assets ../web/out
