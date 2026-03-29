@@ -118,20 +118,65 @@ h3 {
 .app-hero__subtitle {
   margin: 0;
   color: #36455a;
-  font-size: 1.03rem;
+  font-size: clamp(1.06rem, 2vw, 1.22rem);
+  font-weight: 600;
+  max-width: 52ch;
 }
 
 .app-hero__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.5rem;
 }
 
 .app-hero__chip {
   margin-left: 0;
-  background: var(--accent-blue-weak);
-  color: #1e3a8a;
-  border: 1px solid #bcd1ff;
+  width: 100%;
+  min-height: 2.15rem;
+  padding: 0.26rem 0.84rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #edf5ff;
+  color: #1d4d98;
+  border: 1px solid #bfd5ff;
+  white-space: nowrap;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.app-hero__chip--accent {
+  background: #e6f8f0;
+  color: #0f7058;
+  border-color: #9fdcc6;
+}
+
+.app-hero__chip-toggle {
+  background: #fff7e5;
+  color: #8f5600;
+  border-color: #f0d39f;
+  font-weight: 700;
+  justify-content: center;
+}
+
+.app-hero__chip-toggle:hover:not(:disabled) {
+  box-shadow: 0 8px 18px rgba(161, 98, 7, 0.2);
+}
+
+@media (min-width: 920px) {
+  .app-hero__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+  }
+
+  .app-hero__chip {
+    width: auto;
+    justify-content: center;
+  }
 }
 
 .room-header {
@@ -263,7 +308,7 @@ button.secondary {
   border-color: #f6c4c1;
 }
 
-.pill {
+.pill:not(.app-hero__chip) {
   display: inline-block;
   background: var(--accent-weak);
   color: var(--accent);

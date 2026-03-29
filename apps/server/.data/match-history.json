@@ -115,6 +115,115 @@
     ],
     "JP9NSJ": [
       {
+        "matchId": "JP9NSJ:JP9NSJ:1:1774742613926",
+        "roomCode": "JP9NSJ",
+        "startedAt": 1,
+        "completedAt": 1774742613926,
+        "roundsPlayed": 5,
+        "winnerPlayerIds": [
+          "9d9873b6-ec44-4953-86fb-b31e0f6a5b64"
+        ],
+        "players": [
+          {
+            "playerId": "9d9873b6-ec44-4953-86fb-b31e0f6a5b64",
+            "name": "Rishabh",
+            "score": 45
+          },
+          {
+            "playerId": "5aee9c07-da2d-4903-bf54-94b73c48cd58",
+            "name": "Incognito",
+            "score": 11
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 1,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 1
+            },
+            "tricksWon": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 0,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 1
+            },
+            "scoreDelta": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 0,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 11
+            }
+          },
+          {
+            "roundIndex": 1,
+            "cardsPerPlayer": 2,
+            "trumpSuit": "D",
+            "bids": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 2,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 1
+            },
+            "tricksWon": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 2,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 0
+            },
+            "scoreDelta": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 12,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 0
+            }
+          },
+          {
+            "roundIndex": 2,
+            "cardsPerPlayer": 3,
+            "trumpSuit": "C",
+            "bids": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 2,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 2
+            },
+            "tricksWon": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 2,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 1
+            },
+            "scoreDelta": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 12,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 0
+            }
+          },
+          {
+            "roundIndex": 3,
+            "cardsPerPlayer": 4,
+            "trumpSuit": "H",
+            "bids": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 1,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 1
+            },
+            "tricksWon": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 1,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 3
+            },
+            "scoreDelta": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 11,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 0
+            }
+          },
+          {
+            "roundIndex": 4,
+            "cardsPerPlayer": 5,
+            "trumpSuit": "S",
+            "bids": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 0,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 3
+            },
+            "tricksWon": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 0,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 5
+            },
+            "scoreDelta": {
+              "9d9873b6-ec44-4953-86fb-b31e0f6a5b64": 10,
+              "5aee9c07-da2d-4903-bf54-94b73c48cd58": 0
+            }
+          }
+        ]
+      },
+      {
         "matchId": "JP9NSJ:JP9NSJ:1:1774739730579",
         "roomCode": "JP9NSJ",
         "startedAt": 1,

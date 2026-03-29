@@ -76,6 +76,24 @@ interface TrickRevealState {
   winnerId: string;
 }
 
+interface HeroChip {
+  id: string;
+  label: string;
+  tone: "accent" | "neutral";
+}
+
+const HERO_PRIMARY_CHIPS: HeroChip[] = [
+  { id: "no-signup", label: "No signup", tone: "accent" },
+  { id: "private", label: "Private rooms", tone: "accent" },
+  { id: "rejoin", label: "Rejoin quickly", tone: "neutral" },
+  { id: "realtime", label: "Realtime play", tone: "neutral" },
+];
+
+const HERO_EXTRA_CHIPS: HeroChip[] = [
+  { id: "remote", label: "Remote game nights", tone: "neutral" },
+  { id: "cross-country", label: "Cross-country play", tone: "neutral" },
+];
+
 const asObject = (value: unknown): Record<string, unknown> | null =>
   typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
@@ -130,6 +148,7 @@ export function GameClient() {
   const [selectedCompletedRoundIndex, setSelectedCompletedRoundIndex] =
     useState<number | null>(null);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [showAllHeroChips, setShowAllHeroChips] = useState(false);
   const [isHandOrdered, setIsHandOrdered] = useState(false);
   const [revealedCompletedTrick, setRevealedCompletedTrick] =
     useState<TrickRevealState | null>(null);
@@ -352,6 +371,7 @@ export function GameClient() {
     setGameState(null);
     setInfo(null);
     setShowHowToPlay(false);
+    setShowAllHeroChips(false);
     setSelectedSummaryPlayerId(null);
     setSelectedCompletedRoundIndex(null);
     setRevealedCompletedTrick(null);
@@ -499,6 +519,10 @@ export function GameClient() {
     }
     return sortHandCards(handRound.viewerHand, handRound.trumpSuit);
   }, [handRound, isHandOrdered]);
+  const visibleHeroChips = showAllHeroChips
+    ? [...HERO_PRIMARY_CHIPS, ...HERO_EXTRA_CHIPS]
+    : HERO_PRIMARY_CHIPS;
+  const hiddenHeroChipCount = HERO_EXTRA_CHIPS.length;
 
   useEffect(() => {
     setIsHandOrdered(false);
@@ -515,70 +539,100 @@ export function GameClient() {
 
   if (!session) {
     return (
-      <section className="lobby-shell">
-        <h2>Join or Create Room</h2>
-        <p className="lobby-shell__subtitle">
-          Enter your name once, then create a room or join with a shared code.
-        </p>
-        <div className="lobby-steps">
-          <span className="lobby-step">1. Enter your name</span>
-          <span className="lobby-step">2. Create or join room</span>
-          <span className="lobby-step">3. Share room code</span>
-        </div>
-        <div className="lobby-name">
-          <label className="lobby-label" htmlFor="player-name-input">
-            Player name
-          </label>
-          <input
-            id="player-name-input"
-            aria-label="name"
-            placeholder="Your name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </div>
-        <div className="lobby-grid">
-          <form
-            className="lobby-card"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void createRoomFlow();
-            }}
-          >
-            <h3>Create Room</h3>
-            <p>Start a private table and invite players with a room code.</p>
-            <button className="btn-success" type="submit">
-              Create room
-            </button>
-          </form>
-          <form
-            className="lobby-card lobby-card--join"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void joinRoomFlow();
-            }}
-          >
-            <h3>Join Room</h3>
-            <p>Paste the room code shared by the host.</p>
-            <label className="lobby-label" htmlFor="room-code-input">
-              Room code
+      <>
+        <section className="app-hero">
+          <p className="app-hero__subtitle">
+            Create a room, share the code, and start playing with friends in
+            seconds.
+          </p>
+          <div className="app-hero__chips">
+            {visibleHeroChips.map((chip) => (
+              <span
+                className={`pill app-hero__chip ${
+                  chip.tone === "accent" ? "app-hero__chip--accent" : ""
+                }`}
+                key={chip.id}
+              >
+                {chip.label}
+              </span>
+            ))}
+            {hiddenHeroChipCount > 0 ? (
+              <button
+                aria-expanded={showAllHeroChips}
+                className="pill app-hero__chip app-hero__chip-toggle"
+                onClick={() => setShowAllHeroChips((current) => !current)}
+                type="button"
+              >
+                {showAllHeroChips ? "Show less" : `+${hiddenHeroChipCount} more`}
+              </button>
+            ) : null}
+          </div>
+        </section>
+        <section className="lobby-shell">
+          <h2>Join or Create Room</h2>
+          <p className="lobby-shell__subtitle">
+            Enter your name once, then create a room or join with a shared code.
+          </p>
+          <div className="lobby-steps">
+            <span className="lobby-step">1. Enter your name</span>
+            <span className="lobby-step">2. Create or join room</span>
+            <span className="lobby-step">3. Share room code</span>
+          </div>
+          <div className="lobby-name">
+            <label className="lobby-label" htmlFor="player-name-input">
+              Player name
             </label>
             <input
-              id="room-code-input"
-              aria-label="room-code"
-              placeholder="Room code"
-              value={joinCode}
-              onChange={(event) =>
-                setJoinCode(event.target.value.toUpperCase())
-              }
+              id="player-name-input"
+              aria-label="name"
+              placeholder="Your name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
             />
-            <button className="btn-info" type="submit">
-              Join room
-            </button>
-          </form>
-        </div>
-        {error ? <p className="error">{error}</p> : null}
-      </section>
+          </div>
+          <div className="lobby-grid">
+            <form
+              className="lobby-card"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void createRoomFlow();
+              }}
+            >
+              <h3>Create Room</h3>
+              <p>Start a private table and invite players with a room code.</p>
+              <button className="btn-success" type="submit">
+                Create room
+              </button>
+            </form>
+            <form
+              className="lobby-card lobby-card--join"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void joinRoomFlow();
+              }}
+            >
+              <h3>Join Room</h3>
+              <p>Paste the room code shared by the host.</p>
+              <label className="lobby-label" htmlFor="room-code-input">
+                Room code
+              </label>
+              <input
+                id="room-code-input"
+                aria-label="room-code"
+                placeholder="Room code"
+                value={joinCode}
+                onChange={(event) =>
+                  setJoinCode(event.target.value.toUpperCase())
+                }
+              />
+              <button className="btn-info" type="submit">
+                Join room
+              </button>
+            </form>
+          </div>
+          {error ? <p className="error">{error}</p> : null}
+        </section>
+      </>
     );
   }
 
