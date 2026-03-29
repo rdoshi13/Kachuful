@@ -434,6 +434,57 @@
           }
         ]
       }
+    ],
+    "85W8ZZ": [
+      {
+        "matchId": "85W8ZZ:85W8ZZ:1:1774819032360",
+        "roomCode": "85W8ZZ",
+        "startedAt": 1,
+        "completedAt": 1774819032360,
+        "roundsPlayed": 1,
+        "winnerPlayerIds": [
+          "cabdee6c-cd04-4da5-9d7f-ac1644cb1974"
+        ],
+        "players": [
+          {
+            "playerId": "cabdee6c-cd04-4da5-9d7f-ac1644cb1974",
+            "name": "test 2",
+            "score": 11
+          },
+          {
+            "playerId": "783a6b1d-de5f-4d7e-ab80-84a9c763770f",
+            "name": "Rishabh",
+            "score": 0
+          },
+          {
+            "playerId": "64f7d2cf-7d82-4513-94a4-8099e72ef86e",
+            "name": "test 1",
+            "score": 0
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "783a6b1d-de5f-4d7e-ab80-84a9c763770f": 1,
+              "64f7d2cf-7d82-4513-94a4-8099e72ef86e": 1,
+              "cabdee6c-cd04-4da5-9d7f-ac1644cb1974": 1
+            },
+            "tricksWon": {
+              "783a6b1d-de5f-4d7e-ab80-84a9c763770f": 0,
+              "64f7d2cf-7d82-4513-94a4-8099e72ef86e": 0,
+              "cabdee6c-cd04-4da5-9d7f-ac1644cb1974": 1
+            },
+            "scoreDelta": {
+              "783a6b1d-de5f-4d7e-ab80-84a9c763770f": 0,
+              "64f7d2cf-7d82-4513-94a4-8099e72ef86e": 0,
+              "cabdee6c-cd04-4da5-9d7f-ac1644cb1974": 11
+            }
+          }
+        ]
+      }
     ]
   }
 }

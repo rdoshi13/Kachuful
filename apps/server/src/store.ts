@@ -7,6 +7,7 @@ interface Room {
   locked: boolean;
   players: RoomPlayer[];
   gameState: GameState | null;
+  lastEmptyAt: number | null;
 }
 
 const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -53,7 +54,8 @@ export class RoomStore {
       hostPlayerId: playerId,
       locked: false,
       players: [player],
-      gameState: null
+      gameState: null,
+      lastEmptyAt: Date.now()
     };
 
     this.rooms.set(roomCode, room);
@@ -83,39 +85,12 @@ export class RoomStore {
       (player) => normalizeName(player.name) === normalizeName(cleanName)
     );
 
-    if (room.locked) {
-      if (!existingPlayer) {
-        throw new Error("Room is locked");
-      }
-      if (existingPlayer.connected) {
-        throw new Error("Name is already in use");
-      }
-
-      existingPlayer.sessionToken = randomUUID();
-      return {
-        room,
-        response: {
-          roomCode: room.roomCode,
-          playerId: existingPlayer.playerId,
-          sessionToken: existingPlayer.sessionToken
-        }
-      };
+    if (existingPlayer) {
+      throw new Error("Name is already in use");
     }
 
-    if (existingPlayer) {
-      if (existingPlayer.connected) {
-        throw new Error("Name is already in use");
-      }
-
-      existingPlayer.sessionToken = randomUUID();
-      return {
-        room,
-        response: {
-          roomCode: room.roomCode,
-          playerId: existingPlayer.playerId,
-          sessionToken: existingPlayer.sessionToken
-        }
-      };
+    if (room.locked) {
+      throw new Error("Room is locked");
     }
 
     if (room.players.length >= 6) {
@@ -131,6 +106,9 @@ export class RoomStore {
       sessionToken,
       connected: false
     });
+    if (!room.players.some((player) => player.connected)) {
+      room.lastEmptyAt = Date.now();
+    }
 
     return {
       room,
@@ -188,6 +166,7 @@ export class RoomStore {
       throw new Error("Player not found");
     }
     player.connected = true;
+    room.lastEmptyAt = null;
     this.socketIdentity.set(socketId, { roomCode: room.roomCode, playerId });
     this.seenSocketJoin.add(`${room.roomCode}:${player.playerId}`);
   }
@@ -211,8 +190,57 @@ export class RoomStore {
     }
 
     player.connected = false;
+    if (!room.players.some((entry) => entry.connected)) {
+      room.lastEmptyAt = Date.now();
+    }
     this.socketIdentity.delete(socketId);
     return { room, player };
+  }
+
+  pruneInactiveRooms(idleTtlMs: number, now = Date.now()): string[] {
+    if (idleTtlMs <= 0) {
+      return [];
+    }
+
+    const removedRoomCodes: string[] = [];
+    for (const room of this.rooms.values()) {
+      if (room.players.some((player) => player.connected)) {
+        room.lastEmptyAt = null;
+        continue;
+      }
+
+      if (room.lastEmptyAt === null) {
+        room.lastEmptyAt = now;
+        continue;
+      }
+
+      if (now - room.lastEmptyAt >= idleTtlMs) {
+        removedRoomCodes.push(room.roomCode);
+      }
+    }
+
+    for (const roomCode of removedRoomCodes) {
+      this.deleteRoom(roomCode);
+    }
+
+    return removedRoomCodes;
+  }
+
+  private deleteRoom(roomCode: string): void {
+    const normalizedRoomCode = roomCode.toUpperCase();
+    this.rooms.delete(normalizedRoomCode);
+
+    for (const [socketId, identity] of this.socketIdentity.entries()) {
+      if (identity.roomCode === normalizedRoomCode) {
+        this.socketIdentity.delete(socketId);
+      }
+    }
+
+    for (const key of this.seenSocketJoin) {
+      if (key.startsWith(`${normalizedRoomCode}:`)) {
+        this.seenSocketJoin.delete(key);
+      }
+    }
   }
 
   getIdentityBySocket(socketId: string): { roomCode: string; playerId: string } | null {

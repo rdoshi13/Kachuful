@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 import { RoomStore } from "../src/store.js";
 
 describe("RoomStore join behavior", () => {
-  it("reuses offline seat for same-name rejoin", () => {
+  it("rejects same-name join even when previous seat is offline", () => {
     const store = new RoomStore();
     const created = store.createRoom("Host");
     const firstJoin = store.joinRoom(created.room.roomCode, "Guest");
-    const secondJoin = store.joinRoom(created.room.roomCode, "Guest");
 
-    expect(secondJoin.response.playerId).toBe(firstJoin.response.playerId);
-    expect(secondJoin.response.sessionToken).not.toBe(firstJoin.response.sessionToken);
+    expect(() => store.joinRoom(created.room.roomCode, "Guest")).toThrow(
+      "Name is already in use"
+    );
 
     const room = store.getRoom(created.room.roomCode);
     expect(room?.players.map((player) => player.name)).toEqual(["Host", "Guest"]);
+    expect(room?.players.filter((player) => player.playerId === firstJoin.response.playerId)).toHaveLength(1);
   });
 
   it("rejects same-name join when existing player is online", () => {
@@ -27,16 +28,16 @@ describe("RoomStore join behavior", () => {
     );
   });
 
-  it("allows same-name offline seat reclaim even when room is locked", () => {
+  it("rejects same-name join even when room is locked", () => {
     const store = new RoomStore();
     const created = store.createRoom("Host");
-    const guest = store.joinRoom(created.room.roomCode, "Guest");
+    store.joinRoom(created.room.roomCode, "Guest");
 
     store.setRoomLocked(created.room.roomCode, true);
 
-    const reclaimed = store.joinRoom(created.room.roomCode, "Guest");
-    expect(reclaimed.response.playerId).toBe(guest.response.playerId);
-    expect(reclaimed.response.sessionToken).not.toBe(guest.response.sessionToken);
+    expect(() => store.joinRoom(created.room.roomCode, "Guest")).toThrow(
+      "Name is already in use"
+    );
   });
 
   it("rejects new-player join when room is locked", () => {
@@ -47,5 +48,33 @@ describe("RoomStore join behavior", () => {
     expect(() => store.joinRoom(created.room.roomCode, "Guest")).toThrow(
       "Room is locked"
     );
+  });
+
+  it("prunes room after inactivity threshold when everyone is disconnected", () => {
+    const store = new RoomStore();
+    const created = store.createRoom("Host");
+
+    // Host opens a socket session and then disconnects.
+    store.markConnected(created.room.roomCode, created.response.playerId, "socket-1");
+    store.markDisconnected("socket-1");
+
+    const notYetRemoved = store.pruneInactiveRooms(5_000, Date.now() + 2_000);
+    expect(notYetRemoved).toEqual([]);
+    expect(store.getRoom(created.room.roomCode)).not.toBeNull();
+
+    const removed = store.pruneInactiveRooms(5_000, Date.now() + 6_000);
+    expect(removed).toEqual([created.room.roomCode]);
+    expect(store.getRoom(created.room.roomCode)).toBeNull();
+  });
+
+  it("does not prune room while at least one player is connected", () => {
+    const store = new RoomStore();
+    const created = store.createRoom("Host");
+
+    store.markConnected(created.room.roomCode, created.response.playerId, "socket-1");
+    const removed = store.pruneInactiveRooms(1, Date.now() + 60_000);
+
+    expect(removed).toEqual([]);
+    expect(store.getRoom(created.room.roomCode)).not.toBeNull();
   });
 });

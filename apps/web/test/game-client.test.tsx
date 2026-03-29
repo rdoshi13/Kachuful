@@ -57,6 +57,20 @@ afterEach(() => {
 });
 
 describe("GameClient", () => {
+  it("opens how to play modal from lobby", async () => {
+    render(<GameClient />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "How to Play" }));
+
+    expect(await screen.findByText("How to Play Kachuful")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("How to Play Kachuful")).not.toBeInTheDocument();
+    });
+  });
+
   it("creates room and joins socket with saved session", async () => {
     vi.stubGlobal(
       "fetch",
@@ -91,6 +105,34 @@ describe("GameClient", () => {
       playerId: "p1",
       sessionToken: "token-1",
     });
+  });
+
+  it("shows duplicate-name join error directly in lobby", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        json: async () => ({
+          error: "Name is already in use",
+        }),
+      })),
+    );
+
+    render(<GameClient />);
+
+    fireEvent.change(screen.getByLabelText("name"), {
+      target: { value: "Guest" },
+    });
+    fireEvent.change(screen.getByLabelText("room-code"), {
+      target: { value: "ROOM01" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Join room" }));
+
+    expect(
+      await screen.findByText(
+        "That name is already taken in this room. Please choose a different name.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows start game only when at least two players are in the room", async () => {

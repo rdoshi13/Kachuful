@@ -67,6 +67,9 @@ interface CreateApiServerOptions {
   historyStore?: MatchHistoryStore;
 }
 
+const ROOM_IDLE_TTL_MS = Number(process.env.ROOM_IDLE_TTL_MS ?? 60 * 60 * 1000);
+const ROOM_PRUNE_INTERVAL_MS = Number(process.env.ROOM_PRUNE_INTERVAL_MS ?? 60 * 1000);
+
 export const createApiServer = (options: CreateApiServerOptions = {}): {
   store: RoomStore;
   historyStore: MatchHistoryStore;
@@ -79,6 +82,19 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
   const httpServer = createHttpServer(app);
   const io = new SocketIOServer(httpServer, {
     cors: { origin: "*" }
+  });
+  const roomPruneInterval = setInterval(() => {
+    const removedRooms = store.pruneInactiveRooms(ROOM_IDLE_TTL_MS);
+    if (removedRooms.length > 0) {
+      log("info", "Pruned inactive rooms", {
+        removedCount: removedRooms.length,
+        roomCodes: removedRooms
+      });
+    }
+  }, ROOM_PRUNE_INTERVAL_MS);
+  roomPruneInterval.unref();
+  httpServer.once("close", () => {
+    clearInterval(roomPruneInterval);
   });
 
   const broadcastRoomState = (roomCode: string): void => {
