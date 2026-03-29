@@ -765,12 +765,70 @@ td {
   margin-bottom: 0.6rem;
 }
 
-.howto-section + .howto-section {
-  margin-top: 0.85rem;
+.howto-intro {
+  margin: 0 0 0.7rem;
+  color: #475569;
 }
 
-.howto-section h4 {
-  margin: 0 0 0.45rem;
+.howto-quickstart {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+
+.howto-step {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f2f9ff 100%);
+  padding: 0.5rem 0.55rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.howto-step__index {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: #e5efff;
+  color: #1e40af;
+  border: 1px solid #c2d7ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.howto-step p {
+  margin: 0;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.howto-accordions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.howto-accordion {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.42rem 0.55rem;
+}
+
+.howto-accordion summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #1f2a3b;
+  margin-bottom: 0.4rem;
+}
+
+.howto-accordion[open] summary {
+  margin-bottom: 0.55rem;
 }
 
 .howto-list {
@@ -779,6 +837,53 @@ td {
   color: #334155;
   display: grid;
   gap: 0.35rem;
+}
+
+.howto-score-table {
+  margin-top: 0.6rem;
+}
+
+.howto-score-table th,
+.howto-score-table td {
+  font-size: 0.9rem;
+}
+
+.howto-trick {
+  margin-top: 0.65rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.55rem;
+}
+
+.howto-trick__title {
+  margin: 0 0 0.4rem;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.howto-control-tag {
+  display: inline-block;
+  margin-right: 0.35rem;
+  margin-bottom: 0.2rem;
+  padding: 0.12rem 0.46rem;
+  border-radius: 999px;
+  border: 1px solid #bfd5ff;
+  background: #edf5ff;
+  color: #1d4d98;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.howto-control-tag--success {
+  border-color: #9fdcc6;
+  background: #e7f8f1;
+  color: #0f7058;
+}
+
+.howto-control-tag--danger {
+  border-color: #f4c7c4;
+  background: #fff0f0;
+  color: #b42318;
 }
 
 .won-tricks {
@@ -901,6 +1006,19 @@ td {
 
   .lobby-grid {
     grid-template-columns: 1fr;
+  }
+
+  .howto-quickstart {
+    grid-template-columns: 1fr;
+  }
+
+  .howto-accordion {
+    padding: 0.42rem 0.48rem;
+  }
+
+  .howto-score-table th,
+  .howto-score-table td {
+    font-size: 0.84rem;
   }
 }
 

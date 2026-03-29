@@ -1289,41 +1289,147 @@ export function GameClient() {
                 Close
               </button>
             </div>
+            <p className="howto-intro">
+              Learn the flow quickly, then use the controls confidently during live rounds.
+            </p>
 
-            <div className="howto-section">
-              <h4>Rules</h4>
-              <ul className="howto-list">
-                <li>2 to 6 players can join a room.</li>
-                <li>Round pattern is 1,2,3,4,5,6,7,8,7,6,5,4,3,2,1 cards.</li>
-                <li>Trump suit rotates every round: Spades, Diamonds, Clubs, Hearts.</li>
-                <li>Round 1 is blind: bids lock first, then cards are revealed.</li>
-                <li>Dealer cannot make the final bid that makes total bids equal total tricks.</li>
-                <li>You must follow lead suit if possible.</li>
-                <li>Highest trump wins; if no trump, highest lead-suit card wins.</li>
-                <li>Exact bid scores 10 + tricks won; miss scores 0.</li>
-                <li>
-                  Completed tricks are revealed briefly and the winner card is highlighted.
-                </li>
-              </ul>
+            <div className="howto-quickstart">
+              <div className="howto-step">
+                <span className="howto-step__index">1</span>
+                <p>Create or join a private room with a code.</p>
+              </div>
+              <div className="howto-step">
+                <span className="howto-step__index">2</span>
+                <p>Bid exactly what you expect to win.</p>
+              </div>
+              <div className="howto-step">
+                <span className="howto-step__index">3</span>
+                <p>Follow suit, win tricks, and hit your bid for points.</p>
+              </div>
             </div>
 
-            <div className="howto-section">
-              <h4>Buttons in this app</h4>
-              <ul className="howto-list">
-                <li>Create room: create a new private room code.</li>
-                <li>Join room: join an existing room code.</li>
-                <li>Copy code: copy the room code to clipboard.</li>
-                <li>Lock room / Unlock room: host controls who can newly join by name.</li>
-                <li>Start game: host only, requires at least 2 players in room.</li>
-                <li>End game: host can finish the current match early.</li>
-                <li>Bid X: submit your bid for the round.</li>
-                <li>Order hand: sort your cards with trump first.</li>
-                <li>Winning tricks: open tricks won by that player this round.</li>
-                <li>Round summary: open that player’s round-by-round results.</li>
-                <li>Sync state: re-fetch latest room and game state.</li>
-                <li>Leave: leave the room on this device.</li>
-                <li>Spectator tag: player joined mid-match and will be auto-added next game.</li>
-              </ul>
+            <div className="howto-accordions">
+              <details className="howto-accordion" open>
+                <summary>Round Flow</summary>
+                <ul className="howto-list">
+                  <li>2 to 6 players can join a room.</li>
+                  <li>Round pattern is 1,2,3,4,5,6,7,8,7,6,5,4,3,2,1 cards.</li>
+                  <li>Trump rotates every round: Spades, Diamonds, Clubs, Hearts.</li>
+                  <li>Round 1 is blind: bids lock first, then cards are revealed.</li>
+                  <li>Dealer cannot make the final bid that makes total bids equal total tricks.</li>
+                  <li>You must follow lead suit whenever possible.</li>
+                  <li>Completed tricks stay visible for 2 seconds with winner highlight.</li>
+                </ul>
+              </details>
+
+              <details className="howto-accordion" open>
+                <summary>Winning & Scoring</summary>
+                <ul className="howto-list">
+                  <li>Highest trump wins the trick; if no trump is played, highest lead suit wins.</li>
+                  <li>Exact bid scores 10 + tricks won; miss scores 0 for that round.</li>
+                </ul>
+
+                <table className="howto-score-table">
+                  <thead>
+                    <tr>
+                      <th>Bid</th>
+                      <th>Won</th>
+                      <th>Result</th>
+                      <th>Round Points</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>2</td>
+                      <td>2</td>
+                      <td>✓ Hit</td>
+                      <td>+12</td>
+                    </tr>
+                    <tr>
+                      <td>2</td>
+                      <td>1</td>
+                      <td>✗ Miss</td>
+                      <td>0</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div className="howto-trick">
+                  <p className="howto-trick__title">Trick example (Trump: Spades)</p>
+                  <div className="cards">
+                    <span className="trick-card">
+                      <span className="trick-card__player">Lead</span>
+                      <PlayingCard cardId="9H" />
+                    </span>
+                    <span className="trick-card">
+                      <span className="trick-card__player">Follow</span>
+                      <PlayingCard cardId="QH" />
+                    </span>
+                    <span className="trick-card trick-card--winner">
+                      <span className="trick-card__player">Trump wins</span>
+                      <PlayingCard cardId="2S" />
+                    </span>
+                  </div>
+                </div>
+              </details>
+
+              <details className="howto-accordion" open>
+                <summary>Buttons & Controls</summary>
+                <ul className="howto-list">
+                  <li>
+                    <span className="howto-control-tag">Create room</span>
+                    Start a new private room code.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Join room</span>
+                    Join an existing room by code.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Copy code</span>
+                    Copy room code to clipboard.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Lock / Unlock room</span>
+                    Host controls whether new names can join.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag howto-control-tag--success">Start game</span>
+                    Host only; requires at least 2 online players.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag howto-control-tag--danger">End game</span>
+                    Host can finish the active match early.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Bid X</span>
+                    Submit your bid for the round.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Order hand</span>
+                    Sort cards with trump suit first.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Winning tricks</span>
+                    View tricks won by a player this round.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Round summary</span>
+                    View that player’s round-by-round results.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Sync state</span>
+                    Re-fetch latest room and game state.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Leave</span>
+                    Exit room on this device.
+                  </li>
+                  <li>
+                    <span className="howto-control-tag">Spectator</span>
+                    Mid-match joiners can watch; only online players are included on restart.
+                  </li>
+                </ul>
+              </details>
             </div>
           </div>
         </div>

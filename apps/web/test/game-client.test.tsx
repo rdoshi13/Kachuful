@@ -370,10 +370,12 @@ describe("GameClient", () => {
     fireEvent.click(await screen.findByRole("button", { name: "How to Play" }));
 
     expect(await screen.findByText("How to Play Kachuful")).toBeInTheDocument();
-    expect(await screen.findByText("Rules")).toBeInTheDocument();
-    expect(await screen.findByText("Buttons in this app")).toBeInTheDocument();
-    expect(await screen.findByText("You must follow lead suit if possible.")).toBeInTheDocument();
-    expect(await screen.findByText("Order hand: sort your cards with trump first.")).toBeInTheDocument();
+    expect(await screen.findByText("Round Flow")).toBeInTheDocument();
+    expect(await screen.findByText("Winning & Scoring")).toBeInTheDocument();
+    expect(await screen.findByText("Buttons & Controls")).toBeInTheDocument();
+    expect(await screen.findByText("You must follow lead suit whenever possible.")).toBeInTheDocument();
+    expect(await screen.findByText("Host only; requires at least 2 online players.")).toBeInTheDocument();
+    expect(await screen.findByText("Sort cards with trump suit first.")).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "Escape" });
 

@@ -348,6 +348,32 @@
           }
         ]
       }
+    ],
+    "Q4NYAU": [
+      {
+        "matchId": "Q4NYAU:Q4NYAU:1:1774753186613",
+        "roomCode": "Q4NYAU",
+        "startedAt": 1,
+        "completedAt": 1774753186613,
+        "roundsPlayed": 0,
+        "winnerPlayerIds": [
+          "491792c9-332e-4074-8d15-db0ac6854c98",
+          "87b7e454-ae32-4198-ba39-96decd3e02dc"
+        ],
+        "players": [
+          {
+            "playerId": "491792c9-332e-4074-8d15-db0ac6854c98",
+            "name": "Rishabh",
+            "score": 0
+          },
+          {
+            "playerId": "87b7e454-ae32-4198-ba39-96decd3e02dc",
+            "name": "test 1",
+            "score": 0
+          }
+        ],
+        "completedRounds": []
+      }
     ]
   }
 }
