@@ -264,6 +264,90 @@
           }
         ]
       }
+    ],
+    "MNPLCV": [
+      {
+        "matchId": "MNPLCV:MNPLCV:1:1774748429592",
+        "roomCode": "MNPLCV",
+        "startedAt": 1,
+        "completedAt": 1774748429592,
+        "roundsPlayed": 1,
+        "winnerPlayerIds": [
+          "7326be5d-80a0-4174-87c1-acdf5786a897"
+        ],
+        "players": [
+          {
+            "playerId": "7326be5d-80a0-4174-87c1-acdf5786a897",
+            "name": "Incognito",
+            "score": 10
+          },
+          {
+            "playerId": "7b1713c4-979d-4675-a0f9-762e888b1289",
+            "name": "Rishabh",
+            "score": 0
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "7b1713c4-979d-4675-a0f9-762e888b1289": 0,
+              "7326be5d-80a0-4174-87c1-acdf5786a897": 0
+            },
+            "tricksWon": {
+              "7b1713c4-979d-4675-a0f9-762e888b1289": 1,
+              "7326be5d-80a0-4174-87c1-acdf5786a897": 0
+            },
+            "scoreDelta": {
+              "7b1713c4-979d-4675-a0f9-762e888b1289": 0,
+              "7326be5d-80a0-4174-87c1-acdf5786a897": 10
+            }
+          }
+        ]
+      },
+      {
+        "matchId": "MNPLCV:MNPLCV:1:1774748410392",
+        "roomCode": "MNPLCV",
+        "startedAt": 1,
+        "completedAt": 1774748410392,
+        "roundsPlayed": 1,
+        "winnerPlayerIds": [
+          "7b1713c4-979d-4675-a0f9-762e888b1289"
+        ],
+        "players": [
+          {
+            "playerId": "7b1713c4-979d-4675-a0f9-762e888b1289",
+            "name": "Rishabh",
+            "score": 11
+          },
+          {
+            "playerId": "7326be5d-80a0-4174-87c1-acdf5786a897",
+            "name": "Incognito",
+            "score": 0
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "7b1713c4-979d-4675-a0f9-762e888b1289": 1,
+              "7326be5d-80a0-4174-87c1-acdf5786a897": 1
+            },
+            "tricksWon": {
+              "7b1713c4-979d-4675-a0f9-762e888b1289": 1,
+              "7326be5d-80a0-4174-87c1-acdf5786a897": 0
+            },
+            "scoreDelta": {
+              "7b1713c4-979d-4675-a0f9-762e888b1289": 11,
+              "7326be5d-80a0-4174-87c1-acdf5786a897": 0
+            }
+          }
+        ]
+      }
     ]
   }
 }

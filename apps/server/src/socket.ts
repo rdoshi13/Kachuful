@@ -145,8 +145,9 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
       emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
       return;
     }
-    if (room.players.length < 2) {
-      emitGameError(socket, "At least 2 players required", "MIN_PLAYERS");
+    const activePlayers = room.players.filter((player) => player.connected);
+    if (activePlayers.length < 2) {
+      emitGameError(socket, "At least 2 active players required", "MIN_PLAYERS");
       return;
     }
     if (room.gameState?.phase === "game_complete") {
@@ -155,7 +156,7 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
 
     const game = createGame({
       gameId: room.roomCode,
-      players: room.players.map((player) => ({ playerId: player.playerId, name: player.name }))
+      players: activePlayers.map((player) => ({ playerId: player.playerId, name: player.name }))
     });
     const started = applyCommand(game, {
       type: "start_game",
