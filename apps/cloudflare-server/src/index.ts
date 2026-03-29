@@ -368,8 +368,14 @@ export class GameHub extends DurableObject<Env> {
       case "game:start":
         await this.handleGameStart(socket);
         return;
+      case "room:lock_toggle":
+        await this.handleRoomLockToggle(socket, message.payload);
+        return;
       case "game:restart":
         await this.handleGameRestart(socket);
+        return;
+      case "game:end":
+        await this.handleGameEnd(socket);
         return;
       case "bid:submit":
         await this.handleBidSubmit(socket, message.payload);
@@ -529,6 +535,72 @@ export class GameHub extends DurableObject<Env> {
     await this.startRoomGame(room.roomCode, identity.playerId, socket);
   }
 
+  private async handleRoomLockToggle(socket: WebSocket, payload: unknown): Promise<void> {
+    const identity = this.socketIdentity.get(socket);
+    if (!identity) {
+      this.emitGameError(socket, "Join room first", "NOT_JOINED");
+      return;
+    }
+
+    const room = this.rooms.get(identity.roomCode);
+    if (!room) {
+      this.emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+      return;
+    }
+    if (room.hostPlayerId !== identity.playerId) {
+      this.emitGameError(socket, "Only host can change room lock", "FORBIDDEN");
+      return;
+    }
+
+    const body = asObject(payload);
+    const lockedFromPayload = body?.locked;
+    const nextLocked = typeof lockedFromPayload === "boolean"
+      ? lockedFromPayload
+      : !room.locked;
+
+    room.locked = nextLocked;
+    await this.persistState();
+    this.broadcastRoomState(room.roomCode);
+  }
+
+  private async handleGameEnd(socket: WebSocket): Promise<void> {
+    const identity = this.socketIdentity.get(socket);
+    if (!identity) {
+      this.emitGameError(socket, "Join room first", "NOT_JOINED");
+      return;
+    }
+
+    const room = this.rooms.get(identity.roomCode);
+    if (!room) {
+      this.emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+      return;
+    }
+    if (room.hostPlayerId !== identity.playerId) {
+      this.emitGameError(socket, "Only host can end game", "FORBIDDEN");
+      return;
+    }
+    if (!room.gameState) {
+      this.emitGameError(socket, "No game to end", "NO_ACTIVE_GAME");
+      return;
+    }
+    if (room.gameState.phase === "game_complete") {
+      this.emitGameError(socket, "Game already complete", "GAME_ALREADY_COMPLETE");
+      return;
+    }
+
+    const endedState: GameState = {
+      ...room.gameState,
+      phase: "game_complete",
+      currentRound: null,
+      updatedAt: Date.now()
+    };
+    room.gameState = endedState;
+    this.recordCompletedGame(room.roomCode, endedState);
+
+    await this.persistState();
+    this.broadcastGameState(room.roomCode);
+  }
+
   private async handleBidSubmit(socket: WebSocket, payload: unknown): Promise<void> {
     const identity = this.socketIdentity.get(socket);
     if (!identity) {
@@ -626,8 +698,9 @@ export class GameHub extends DurableObject<Env> {
       this.emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
       return;
     }
-    if (room.players.length < 2) {
-      this.emitGameError(socket, "At least 2 players required", "MIN_PLAYERS");
+    const activePlayers = room.players.filter((player) => player.connected);
+    if (activePlayers.length < 2) {
+      this.emitGameError(socket, "At least 2 active players required", "MIN_PLAYERS");
       return;
     }
     if (room.gameState?.phase === "game_complete") {
@@ -636,7 +709,7 @@ export class GameHub extends DurableObject<Env> {
 
     const game = createGame({
       gameId: room.roomCode,
-      players: room.players.map((player) => ({ playerId: player.playerId, name: player.name }))
+      players: activePlayers.map((player) => ({ playerId: player.playerId, name: player.name }))
     });
     const started = applyCommand(game, {
       type: "start_game",
@@ -648,7 +721,6 @@ export class GameHub extends DurableObject<Env> {
     }
 
     room.gameState = started.state;
-    room.locked = true;
     await this.persistState();
     this.broadcastRoomState(roomCode);
     this.broadcastGameState(roomCode);
