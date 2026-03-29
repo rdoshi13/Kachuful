@@ -564,8 +564,7 @@ table {
 }
 
 .table-scroll--breakdown table {
-  min-width: 100%;
-  table-layout: fixed;
+  width: 100%;
 }
 
 th,
@@ -995,8 +994,23 @@ td {
   margin-top: 0.35rem;
 }
 
-.final-results__table th,
-.final-results__table td,
+.table-scroll--breakdown {
+  scrollbar-gutter: stable both-edges;
+}
+
+.final-results__table--breakdown {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.final-results__table--breakdown th,
+.final-results__table--breakdown td {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
 .summary-table th,
 .summary-table td {
   overflow-wrap: anywhere;
@@ -1082,7 +1096,7 @@ td {
   }
 
   .table-scroll--breakdown table {
-    font-size: 0.86rem;
+    font-size: 0.9rem;
   }
 }
 

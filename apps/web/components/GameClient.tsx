@@ -925,14 +925,17 @@ export function GameClient() {
 
                     <h4>Round-by-Round Breakdown</h4>
                     <div className="table-scroll table-scroll--breakdown">
-                      <table className="final-results__table">
+                      <table className="final-results__table final-results__table--breakdown">
                         <thead>
                           <tr>
-                            <th>Round</th>
-                            <th>Cards</th>
-                            <th>Trump</th>
+                            <th style={{ minWidth: "6ch" }}>Round</th>
+                            <th style={{ minWidth: "6ch" }}>Cards</th>
+                            <th style={{ minWidth: "8ch" }}>Trump</th>
                             {gameState.players.map((player) => (
-                              <th key={`final-breakdown-header-${player.playerId}`}>
+                              <th
+                                key={`final-breakdown-header-${player.playerId}`}
+                                style={{ minWidth: `${Math.max(player.name.length + 1, 8)}ch` }}
+                              >
                                 {player.name}
                               </th>
                             ))}
@@ -1162,7 +1165,7 @@ export function GameClient() {
               Cards: {selectedCompletedRound.cardsPerPlayer} | Trump:{" "}
               {getTrumpSuitDisplay(selectedCompletedRound.trumpSuit)}
             </p>
-            <div className="table-scroll table-scroll--breakdown">
+            <div className="table-scroll table-scroll--wide">
               <table className="summary-table">
                 <thead>
                   <tr>
@@ -1235,7 +1238,7 @@ export function GameClient() {
                 Close
               </button>
             </div>
-            <div className="table-scroll table-scroll--breakdown">
+            <div className="table-scroll table-scroll--wide">
               <table className="summary-table">
                 <thead>
                   <tr>
