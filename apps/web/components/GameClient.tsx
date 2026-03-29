@@ -741,8 +741,8 @@ export function GameClient() {
       </section>
 
       {gameState ? (
-        <section className="game-shell">
-          <div className="game-layout">
+        <>
+          <section className="game-shell">
             <div className="game-main">
               <h2>Game</h2>
               <p>Round: {visibleRoundNumber}</p>
@@ -855,218 +855,230 @@ export function GameClient() {
                   </div>
                 </div>
               ) : null}
+            </div>
+          </section>
 
-              <h3>Scoreboard</h3>
-              <table className="score-table">
-                <thead>
-                  <tr>
-                    <th>Player</th>
-                    <th>Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scoreboard.map((row) => (
-                    <tr key={row.playerId}>
-                      <td>{row.name}</td>
-                      <td>{row.score}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {gameState.phase === "game_complete" ? (
-                <div className="final-results">
-                  <h3>Game Complete</h3>
-                  <p className="final-results__winner">
-                    Winner{winners.length > 1 ? "s" : ""}:{" "}
-                    {winners.map((winner) => winner.name).join(", ")} (
-                    {winningScore} points)
-                  </p>
-                  {isHost ? (
-                    <button
-                      className="btn-success"
-                      onClick={() => {
-                        socketRef.current?.emit("game:restart");
-                      }}
-                      type="button"
-                    >
-                      Start New Game
-                    </button>
-                  ) : null}
-
-                  <h4>Final Standings</h4>
-                  <table className="final-results__table">
+          <section className="game-details-shell">
+            <div className="game-details-layout">
+              <div className="game-score-panel">
+                <h3>Scoreboard</h3>
+                <div className="table-scroll table-scroll--wide">
+                  <table className="score-table">
                     <thead>
                       <tr>
-                        <th>Rank</th>
                         <th>Player</th>
                         <th>Score</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedFinalScores.map((entry, index) => (
-                        <tr key={`final-standings-${entry.playerId}`}>
-                          <td>{index + 1}</td>
-                          <td>{entry.name}</td>
-                          <td>{entry.score}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  <h4>Round-by-Round Breakdown</h4>
-                  <table className="final-results__table">
-                    <thead>
-                      <tr>
-                        <th>Round</th>
-                        <th>Cards</th>
-                        <th>Trump</th>
-                        {gameState.players.map((player) => (
-                          <th key={`final-breakdown-header-${player.playerId}`}>
-                            {player.name}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {gameState.completedRounds.map((round) => (
-                        <tr key={`final-breakdown-row-${round.roundIndex}`}>
-                          <td>{round.roundIndex + 1}</td>
-                          <td>{round.cardsPerPlayer}</td>
-                          <td>{getTrumpSuitLabel(round.trumpSuit)}</td>
-                          {gameState.players.map((player) => {
-                            const playerId = player.playerId;
-                            const bid = round.bids[playerId] ?? 0;
-                            const won = round.tricksWon[playerId] ?? 0;
-                            const points = round.scoreDelta[playerId] ?? 0;
-                            return (
-                              <td
-                                key={`final-breakdown-cell-${round.roundIndex}-${playerId}`}
-                              >
-                                {bid}/{won} (
-                                {points > 0 ? `+${points}` : points})
-                              </td>
-                            );
-                          })}
+                      {scoreboard.map((row) => (
+                        <tr key={row.playerId}>
+                          <td>{row.name}</td>
+                          <td>{row.score}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              ) : null}
-            </div>
 
-            <aside className="round-stats">
-              <div className="round-info">
-                <h3>Round Info</h3>
-                <p className="round-stats__meta">
-                  No. of cards:{" "}
-                  <strong>{currentRound?.cardsPerPlayer ?? "-"}</strong>
-                </p>
-                <p className="round-stats__meta">
-                  Trump:{" "}
-                  <strong>
-                    {trumpSuit ? getTrumpSuitLabel(trumpSuit) : "-"}
-                  </strong>
-                </p>
-                <div className="round-info__trump">
-                  {trumpPreviewCardId ? (
-                    <div
-                      aria-label={`Trump preview ${trumpPreviewCardId}`}
-                      className="round-info__trump-card"
-                    >
-                      <PlayingCard cardId={trumpPreviewCardId} />
+                {gameState.phase === "game_complete" ? (
+                  <div className="final-results">
+                    <h3>Game Complete</h3>
+                    <p className="final-results__winner">
+                      Winner{winners.length > 1 ? "s" : ""}:{" "}
+                      {winners.map((winner) => winner.name).join(", ")} (
+                      {winningScore} points)
+                    </p>
+                    {isHost ? (
+                      <button
+                        className="btn-success"
+                        onClick={() => {
+                          socketRef.current?.emit("game:restart");
+                        }}
+                        type="button"
+                      >
+                        Start New Game
+                      </button>
+                    ) : null}
+
+                    <h4>Final Standings</h4>
+                    <div className="table-scroll table-scroll--wide">
+                      <table className="final-results__table">
+                        <thead>
+                          <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Score</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortedFinalScores.map((entry, index) => (
+                            <tr key={`final-standings-${entry.playerId}`}>
+                              <td>{index + 1}</td>
+                              <td>{entry.name}</td>
+                              <td>{entry.score}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  ) : (
-                    <p>No active round.</p>
-                  )}
-                </div>
+
+                    <h4>Round-by-Round Breakdown</h4>
+                    <div className="table-scroll table-scroll--breakdown">
+                      <table className="final-results__table">
+                        <thead>
+                          <tr>
+                            <th>Round</th>
+                            <th>Cards</th>
+                            <th>Trump</th>
+                            {gameState.players.map((player) => (
+                              <th key={`final-breakdown-header-${player.playerId}`}>
+                                {player.name}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {gameState.completedRounds.map((round) => (
+                            <tr key={`final-breakdown-row-${round.roundIndex}`}>
+                              <td>{round.roundIndex + 1}</td>
+                              <td>{round.cardsPerPlayer}</td>
+                              <td>{getTrumpSuitLabel(round.trumpSuit)}</td>
+                              {gameState.players.map((player) => {
+                                const playerId = player.playerId;
+                                const bid = round.bids[playerId] ?? 0;
+                                const won = round.tricksWon[playerId] ?? 0;
+                                const points = round.scoreDelta[playerId] ?? 0;
+                                return (
+                                  <td
+                                    key={`final-breakdown-cell-${round.roundIndex}-${playerId}`}
+                                  >
+                                    {bid}/{won} (
+                                    {points > 0 ? `+${points}` : points})
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
-              <h3>Round Tracker</h3>
-              <p className="round-stats__hint">
-                Current round bids and tricks won.
-              </p>
-              {currentRound ? (
-                <div className="round-stats__list">
-                  {gameState.players.map((player) => {
-                    const bidRaw = currentRound.bids[player.playerId];
-                    const bid = typeof bidRaw === "number" ? bidRaw : null;
-                    const won = currentRound.tricksWon[player.playerId] ?? 0;
-                    const isSelf = session?.playerId === player.playerId;
-                    const isActiveTurn = activeTurnPlayerId === player.playerId;
-                    const handsNeeded = bid === null ? 0 : bid - won;
-                    const handsNeededText =
-                      bid === null
-                        ? "-"
-                        : handsNeeded > 0
-                          ? `Need ${handsNeeded}`
-                          : handsNeeded < 0
-                            ? `Over by ${Math.abs(handsNeeded)}`
-                            : "On target";
-                    const handsNeededClass =
-                      bid === null
-                        ? "round-stats__needed--unknown"
-                        : handsNeeded > 0
-                          ? "round-stats__needed--need"
-                          : handsNeeded < 0
-                            ? "round-stats__needed--over"
-                            : "round-stats__needed--on-target";
-                    const wonCount = currentRound.trickHistory.filter(
-                      (trick) => trick.winnerId === player.playerId,
-                    ).length;
-                    return (
+              <aside className="round-stats">
+                <div className="round-info">
+                  <h3>Round Info</h3>
+                  <p className="round-stats__meta">
+                    No. of cards:{" "}
+                    <strong>{currentRound?.cardsPerPlayer ?? "-"}</strong>
+                  </p>
+                  <p className="round-stats__meta">
+                    Trump:{" "}
+                    <strong>
+                      {trumpSuit ? getTrumpSuitLabel(trumpSuit) : "-"}
+                    </strong>
+                  </p>
+                  <div className="round-info__trump">
+                    {trumpPreviewCardId ? (
                       <div
-                        className={`round-stats__row${isSelf ? " round-stats__row--self" : ""}${
-                          isActiveTurn ? " round-stats__row--active-turn" : ""
-                        }`}
-                        key={player.playerId}
+                        aria-label={`Trump preview ${trumpPreviewCardId}`}
+                        className="round-info__trump-card"
                       >
-                        <div className="round-stats__name-row">
-                          <p className="round-stats__name">{player.name}</p>
-                          {isActiveTurn ? (
-                            <span className="pill round-stats__turn-pill">
-                              Playing now
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="round-stats__meta">Bid: {bid ?? "-"}</p>
-                        <p className="round-stats__meta">Won: {won}</p>
-                        <p className={`round-stats__needed ${handsNeededClass}`}>
-                          Hands needed: {handsNeededText}
-                        </p>
-                        <button
-                          aria-label={`View winning tricks for ${player.name}`}
-                          className="secondary btn-info-soft round-stats__button"
-                          disabled={wonCount === 0}
-                          onClick={() =>
-                            setSelectedWinnerPlayerId(player.playerId)
-                          }
-                          type="button"
-                        >
-                          Winning tricks ({wonCount})
-                        </button>
-                        <button
-                          aria-label={`View round summary for ${player.name}`}
-                          className="secondary btn-info-soft round-stats__button"
-                          disabled={gameState.completedRounds.length === 0}
-                          onClick={() =>
-                            setSelectedSummaryPlayerId(player.playerId)
-                          }
-                          type="button"
-                        >
-                          Round summary
-                        </button>
+                        <PlayingCard cardId={trumpPreviewCardId} />
                       </div>
-                    );
-                  })}
+                    ) : (
+                      <p>No active round.</p>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <p>No active round.</p>
-              )}
-            </aside>
-          </div>
-        </section>
+
+                <h3>Round Tracker</h3>
+                <p className="round-stats__hint">
+                  Current round bids and tricks won.
+                </p>
+                {currentRound ? (
+                  <div className="round-stats__list">
+                    {gameState.players.map((player) => {
+                      const bidRaw = currentRound.bids[player.playerId];
+                      const bid = typeof bidRaw === "number" ? bidRaw : null;
+                      const won = currentRound.tricksWon[player.playerId] ?? 0;
+                      const isSelf = session?.playerId === player.playerId;
+                      const isActiveTurn = activeTurnPlayerId === player.playerId;
+                      const handsNeeded = bid === null ? 0 : bid - won;
+                      const handsNeededText =
+                        bid === null
+                          ? "-"
+                          : handsNeeded > 0
+                            ? `Need ${handsNeeded}`
+                            : handsNeeded < 0
+                              ? `Over by ${Math.abs(handsNeeded)}`
+                              : "On target";
+                      const handsNeededClass =
+                        bid === null
+                          ? "round-stats__needed--unknown"
+                          : handsNeeded > 0
+                            ? "round-stats__needed--need"
+                            : handsNeeded < 0
+                              ? "round-stats__needed--over"
+                              : "round-stats__needed--on-target";
+                      const wonCount = currentRound.trickHistory.filter(
+                        (trick) => trick.winnerId === player.playerId,
+                      ).length;
+                      return (
+                        <div
+                          className={`round-stats__row${isSelf ? " round-stats__row--self" : ""}${
+                            isActiveTurn ? " round-stats__row--active-turn" : ""
+                          }`}
+                          key={player.playerId}
+                        >
+                          <div className="round-stats__name-row">
+                            <p className="round-stats__name">{player.name}</p>
+                            {isActiveTurn ? (
+                              <span className="pill round-stats__turn-pill">
+                                Playing now
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="round-stats__meta">Bid: {bid ?? "-"}</p>
+                          <p className="round-stats__meta">Won: {won}</p>
+                          <p className={`round-stats__needed ${handsNeededClass}`}>
+                            Hands needed: {handsNeededText}
+                          </p>
+                          <button
+                            aria-label={`View winning tricks for ${player.name}`}
+                            className="secondary btn-info-soft round-stats__button"
+                            disabled={wonCount === 0}
+                            onClick={() =>
+                              setSelectedWinnerPlayerId(player.playerId)
+                            }
+                            type="button"
+                          >
+                            Winning tricks ({wonCount})
+                          </button>
+                          <button
+                            aria-label={`View round summary for ${player.name}`}
+                            className="secondary btn-info-soft round-stats__button"
+                            disabled={gameState.completedRounds.length === 0}
+                            onClick={() =>
+                              setSelectedSummaryPlayerId(player.playerId)
+                            }
+                            type="button"
+                          >
+                            Round summary
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p>No active round.</p>
+                )}
+              </aside>
+            </div>
+          </section>
+        </>
       ) : null}
 
       {selectedWinnerPlayerId && currentRound ? (
@@ -1150,49 +1162,51 @@ export function GameClient() {
               Cards: {selectedCompletedRound.cardsPerPlayer} | Trump:{" "}
               {getTrumpSuitDisplay(selectedCompletedRound.trumpSuit)}
             </p>
-            <table className="summary-table">
-              <thead>
-                <tr>
-                  <th>Player</th>
-                  <th>Bid</th>
-                  <th>Won</th>
-                  <th>Result</th>
-                  <th>Round Points</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gameState.players.map((player) => {
-                  const playerId = player.playerId;
-                  const bid = selectedCompletedRound.bids[playerId] ?? 0;
-                  const won = selectedCompletedRound.tricksWon[playerId] ?? 0;
-                  const points =
-                    selectedCompletedRound.scoreDelta[playerId] ?? 0;
-                  const total = gameState.scores[playerId] ?? 0;
-                  const hit = bid === won;
-                  return (
-                    <tr key={`round-summary-${selectedCompletedRound.roundIndex}-${playerId}`}>
-                      <td>{player.name}</td>
-                      <td>{bid}</td>
-                      <td>{won}</td>
-                      <td>
-                        <span
-                          aria-label={hit ? "Hit" : "Miss"}
-                          className={`summary-result ${
-                            hit ? "summary-result--hit" : "summary-result--miss"
-                          }`}
-                          title={hit ? "Hit" : "Miss"}
-                        >
-                          {hit ? "✓" : "✗"}
-                        </span>
-                      </td>
-                      <td>{points > 0 ? `+${points}` : `${points}`}</td>
-                      <td>{total}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="table-scroll table-scroll--breakdown">
+              <table className="summary-table">
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Bid</th>
+                    <th>Won</th>
+                    <th>Result</th>
+                    <th>Round Points</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gameState.players.map((player) => {
+                    const playerId = player.playerId;
+                    const bid = selectedCompletedRound.bids[playerId] ?? 0;
+                    const won = selectedCompletedRound.tricksWon[playerId] ?? 0;
+                    const points =
+                      selectedCompletedRound.scoreDelta[playerId] ?? 0;
+                    const total = gameState.scores[playerId] ?? 0;
+                    const hit = bid === won;
+                    return (
+                      <tr key={`round-summary-${selectedCompletedRound.roundIndex}-${playerId}`}>
+                        <td>{player.name}</td>
+                        <td>{bid}</td>
+                        <td>{won}</td>
+                        <td>
+                          <span
+                            aria-label={hit ? "Hit" : "Miss"}
+                            className={`summary-result ${
+                              hit ? "summary-result--hit" : "summary-result--miss"
+                            }`}
+                            title={hit ? "Hit" : "Miss"}
+                          >
+                            {hit ? "✓" : "✗"}
+                          </span>
+                        </td>
+                        <td>{points > 0 ? `+${points}` : `${points}`}</td>
+                        <td>{total}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ) : null}
@@ -1221,48 +1235,50 @@ export function GameClient() {
                 Close
               </button>
             </div>
-            <table className="summary-table">
-              <thead>
-                <tr>
-                  <th>Round</th>
-                  <th>Trump Suit</th>
-                  <th>Bid</th>
-                  <th>Won</th>
-                  <th>Result</th>
-                  <th>Round Points</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gameState.completedRounds.map((round) => {
-                  const bid = round.bids[selectedSummaryPlayerId] ?? 0;
-                  const won = round.tricksWon[selectedSummaryPlayerId] ?? 0;
-                  const points = round.scoreDelta[selectedSummaryPlayerId] ?? 0;
-                  const hit = bid === won;
-                  return (
-                    <tr
-                      key={`summary-${selectedSummaryPlayerId}-${round.roundIndex}`}
-                    >
-                      <td>{round.roundIndex + 1}</td>
-                      <td>{getTrumpSuitDisplay(round.trumpSuit)}</td>
-                      <td>{bid}</td>
-                      <td>{won}</td>
-                      <td>
-                        <span
-                          aria-label={hit ? "Hit" : "Miss"}
-                          className={`summary-result ${
-                            hit ? "summary-result--hit" : "summary-result--miss"
-                          }`}
-                          title={hit ? "Hit" : "Miss"}
-                        >
-                          {hit ? "✓" : "✗"}
-                        </span>
-                      </td>
-                      <td>{points > 0 ? `+${points}` : `${points}`}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="table-scroll table-scroll--breakdown">
+              <table className="summary-table">
+                <thead>
+                  <tr>
+                    <th>Round</th>
+                    <th>Trump Suit</th>
+                    <th>Bid</th>
+                    <th>Won</th>
+                    <th>Result</th>
+                    <th>Round Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gameState.completedRounds.map((round) => {
+                    const bid = round.bids[selectedSummaryPlayerId] ?? 0;
+                    const won = round.tricksWon[selectedSummaryPlayerId] ?? 0;
+                    const points = round.scoreDelta[selectedSummaryPlayerId] ?? 0;
+                    const hit = bid === won;
+                    return (
+                      <tr
+                        key={`summary-${selectedSummaryPlayerId}-${round.roundIndex}`}
+                      >
+                        <td>{round.roundIndex + 1}</td>
+                        <td>{getTrumpSuitDisplay(round.trumpSuit)}</td>
+                        <td>{bid}</td>
+                        <td>{won}</td>
+                        <td>
+                          <span
+                            aria-label={hit ? "Hit" : "Miss"}
+                            className={`summary-result ${
+                              hit ? "summary-result--hit" : "summary-result--miss"
+                            }`}
+                            title={hit ? "Hit" : "Miss"}
+                          >
+                            {hit ? "✓" : "✗"}
+                          </span>
+                        </td>
+                        <td>{points > 0 ? `+${points}` : `${points}`}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ) : null}
@@ -1329,30 +1345,32 @@ export function GameClient() {
                   <li>Exact bid scores 10 + tricks won; miss scores 0 for that round.</li>
                 </ul>
 
-                <table className="howto-score-table">
-                  <thead>
-                    <tr>
-                      <th>Bid</th>
-                      <th>Won</th>
-                      <th>Result</th>
-                      <th>Round Points</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>2</td>
-                      <td>2</td>
-                      <td>✓ Hit</td>
-                      <td>+12</td>
-                    </tr>
-                    <tr>
-                      <td>2</td>
-                      <td>1</td>
-                      <td>✗ Miss</td>
-                      <td>0</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div className="table-scroll table-scroll--wide">
+                  <table className="howto-score-table">
+                    <thead>
+                      <tr>
+                        <th>Bid</th>
+                        <th>Won</th>
+                        <th>Result</th>
+                        <th>Round Points</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>2</td>
+                        <td>2</td>
+                        <td>✓ Hit</td>
+                        <td>+12</td>
+                      </tr>
+                      <tr>
+                        <td>2</td>
+                        <td>1</td>
+                        <td>✗ Miss</td>
+                        <td>0</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
                 <div className="howto-trick">
                   <p className="howto-trick__title">Trick example (Trump: Spades)</p>

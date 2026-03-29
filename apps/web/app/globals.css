@@ -30,6 +30,7 @@ body {
   color: var(--text);
   font-family: "Outfit", "IBM Plex Sans", "Segoe UI", sans-serif;
   line-height: 1.35;
+  overflow-x: hidden;
 }
 
 main {
@@ -544,6 +545,29 @@ table {
   border-collapse: collapse;
 }
 
+.table-scroll {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll table {
+  width: 100%;
+}
+
+.table-scroll--wide table {
+  min-width: 100%;
+}
+
+.table-scroll--breakdown table {
+  min-width: 100%;
+  table-layout: fixed;
+}
+
 th,
 td {
   text-align: left;
@@ -558,9 +582,26 @@ td {
   align-items: start;
 }
 
+.game-details-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.game-details-layout > * {
+  min-width: 0;
+}
+
+.game-score-panel {
+  display: grid;
+  gap: 0.65rem;
+}
+
 .game-main {
   display: grid;
   gap: 0.65rem;
+  min-width: 0;
 }
 
 .game-shell {
@@ -627,6 +668,7 @@ td {
   padding: 0.8rem;
   position: sticky;
   top: 0.9rem;
+  min-width: 0;
 }
 
 .round-info {
@@ -953,6 +995,14 @@ td {
   margin-top: 0.35rem;
 }
 
+.final-results__table th,
+.final-results__table td,
+.summary-table th,
+.summary-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 @keyframes turn-pulse {
   0% {
     box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.08);
@@ -993,7 +1043,7 @@ td {
 
 @media (max-width: 720px) {
   main {
-    width: 96vw;
+    width: min(96vw, 100%);
   }
 
   section {
@@ -1001,6 +1051,10 @@ td {
   }
 
   .game-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .game-details-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1019,6 +1073,16 @@ td {
   .howto-score-table th,
   .howto-score-table td {
     font-size: 0.84rem;
+  }
+
+  th,
+  td {
+    padding: 0.3rem 0.22rem;
+    font-size: 0.92rem;
+  }
+
+  .table-scroll--breakdown table {
+    font-size: 0.86rem;
   }
 }
 

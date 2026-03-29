@@ -374,6 +374,66 @@
         ],
         "completedRounds": []
       }
+    ],
+    "LJEYQF": [
+      {
+        "matchId": "LJEYQF:LJEYQF:1:1774759963562",
+        "roomCode": "LJEYQF",
+        "startedAt": 1,
+        "completedAt": 1774759963562,
+        "roundsPlayed": 2,
+        "winnerPlayerIds": [
+          "7fa94ac9-ea59-4cb5-ace1-517ff581748d"
+        ],
+        "players": [
+          {
+            "playerId": "7fa94ac9-ea59-4cb5-ace1-517ff581748d",
+            "name": "Rishabh",
+            "score": 11
+          },
+          {
+            "playerId": "70b191a8-4b51-43b5-a7c2-30026ef51338",
+            "name": "Incognito",
+            "score": 10
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "7fa94ac9-ea59-4cb5-ace1-517ff581748d": 1,
+              "70b191a8-4b51-43b5-a7c2-30026ef51338": 1
+            },
+            "tricksWon": {
+              "7fa94ac9-ea59-4cb5-ace1-517ff581748d": 1,
+              "70b191a8-4b51-43b5-a7c2-30026ef51338": 0
+            },
+            "scoreDelta": {
+              "7fa94ac9-ea59-4cb5-ace1-517ff581748d": 11,
+              "70b191a8-4b51-43b5-a7c2-30026ef51338": 0
+            }
+          },
+          {
+            "roundIndex": 1,
+            "cardsPerPlayer": 2,
+            "trumpSuit": "D",
+            "bids": {
+              "7fa94ac9-ea59-4cb5-ace1-517ff581748d": 1,
+              "70b191a8-4b51-43b5-a7c2-30026ef51338": 0
+            },
+            "tricksWon": {
+              "7fa94ac9-ea59-4cb5-ace1-517ff581748d": 2,
+              "70b191a8-4b51-43b5-a7c2-30026ef51338": 0
+            },
+            "scoreDelta": {
+              "7fa94ac9-ea59-4cb5-ace1-517ff581748d": 0,
+              "70b191a8-4b51-43b5-a7c2-30026ef51338": 10
+            }
+          }
+        ]
+      }
     ]
   }
 }
