@@ -71,6 +71,55 @@ const sortHandCards = (cardIds: string[], trumpSuit: Suit | null): string[] => {
   });
 };
 
+const getCardSuitFromCardId = (cardId: string): Suit | null => {
+  const suit = cardId.slice(-1) as Suit;
+  return suit in TRUMP_SUIT_LABEL ? suit : null;
+};
+
+const getCardRankValueFromCardId = (cardId: string): number =>
+  RANK_VALUE[cardId.slice(0, -1)] ?? 0;
+
+const getLiveTrickLeaderPlayerId = (
+  trick: TrickPlay[],
+  trumpSuit: Suit,
+): string | null => {
+  if (trick.length === 0) {
+    return null;
+  }
+
+  const leadSuit = getCardSuitFromCardId(trick[0]!.cardId);
+  const firstCardSuit = getCardSuitFromCardId(trick[0]!.cardId);
+  if (!leadSuit || !firstCardSuit) {
+    return trick[0]!.playerId;
+  }
+
+  let winner = trick[0]!;
+  let winnerSuit = firstCardSuit;
+  let winnerRank = getCardRankValueFromCardId(winner.cardId);
+  let winnerStrength = winnerSuit === trumpSuit ? 2 : winnerSuit === leadSuit ? 1 : 0;
+
+  for (let index = 1; index < trick.length; index += 1) {
+    const current = trick[index]!;
+    const currentSuit = getCardSuitFromCardId(current.cardId);
+    if (!currentSuit) {
+      continue;
+    }
+    const currentRank = getCardRankValueFromCardId(current.cardId);
+    const currentStrength = currentSuit === trumpSuit ? 2 : currentSuit === leadSuit ? 1 : 0;
+    if (
+      currentStrength > winnerStrength
+      || (currentStrength === winnerStrength && currentRank > winnerRank)
+    ) {
+      winner = current;
+      winnerSuit = currentSuit;
+      winnerRank = currentRank;
+      winnerStrength = currentStrength;
+    }
+  }
+
+  return winner.playerId;
+};
+
 interface TrickRevealState {
   plays: TrickPlay[];
   winnerId: string;
@@ -543,7 +592,14 @@ export function GameClient() {
   const handRound = isRoundTransitionRevealActive
     ? trickPlay
     : trickPlay ?? (bidding?.cardsDealt ? bidding : null);
-  const winnerIdInDisplayedTrick = revealedCompletedTrick?.winnerId ?? null;
+  const liveTrickLeaderPlayerId = useMemo(() => {
+    if (!trickPlay) {
+      return null;
+    }
+    return getLiveTrickLeaderPlayerId(trickPlay.currentTrick, trickPlay.trumpSuit);
+  }, [trickPlay]);
+  const winnerIdInDisplayedTrick =
+    revealedCompletedTrick?.winnerId ?? liveTrickLeaderPlayerId ?? null;
   const playerNameById = useMemo(
     () =>
       Object.fromEntries(

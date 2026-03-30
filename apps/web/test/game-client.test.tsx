@@ -1093,6 +1093,107 @@ describe("GameClient", () => {
     ).toHaveLength(1);
   });
 
+  it("highlights the current leading card on table and updates as trick changes", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+        { playerId: "p3", name: "Third" },
+      ],
+      phase: "trick_play",
+      scores: { p1: 0, p2: 0, p3: 0 },
+      roundNumber: 1,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 1,
+        cardsPerPlayer: 3,
+        trumpSuit: "S",
+        dealerIndex: 1,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: 1, p2: 1, p3: 1 },
+        bidTurnPlayerId: null,
+        tricksWon: { p1: 0, p2: 0, p3: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p3",
+        currentTrick: [
+          { playerId: "p1", cardId: "KH" },
+          { playerId: "p2", cardId: "2H" },
+        ],
+        trickHistory: [],
+        handSizes: { p1: 2, p2: 2, p3: 2 },
+        viewerHand: ["3C", "4D"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    expect(await screen.findByText("Cards on table")).toBeInTheDocument();
+    expect(document.querySelectorAll(".trick-card--winner")).toHaveLength(1);
+    expect(
+      document.querySelector(".trick-card--winner .trick-card__player")?.textContent,
+    ).toBe("Host");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+        { playerId: "p3", name: "Third" },
+      ],
+      phase: "trick_play",
+      scores: { p1: 0, p2: 0, p3: 0 },
+      roundNumber: 1,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 1,
+        cardsPerPlayer: 3,
+        trumpSuit: "S",
+        dealerIndex: 1,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: 1, p2: 1, p3: 1 },
+        bidTurnPlayerId: null,
+        tricksWon: { p1: 0, p2: 0, p3: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p1",
+        currentTrick: [
+          { playerId: "p1", cardId: "KH" },
+          { playerId: "p2", cardId: "2H" },
+          { playerId: "p3", cardId: "3S" },
+        ],
+        trickHistory: [],
+        handSizes: { p1: 2, p2: 2, p3: 2 },
+        viewerHand: ["3C", "4D"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    await waitFor(() => {
+      expect(
+        document.querySelector(".trick-card--winner .trick-card__player")
+          ?.textContent,
+      ).toBe("Third");
+    });
+  });
+
   it("shows last trick for 2 seconds across round transition and highlights winner", async () => {
     localStorage.setItem(
       "kachuful:session",
