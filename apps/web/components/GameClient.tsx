@@ -94,9 +94,13 @@ const HERO_EXTRA_CHIPS: HeroChip[] = [
   { id: "cross-country", label: "Cross-country play", tone: "neutral" },
 ];
 
-const toLobbyJoinErrorMessage = (message: string): string => {
-  if (message.toLocaleLowerCase().includes("already in use")) {
+const toUserFacingErrorMessage = (message: string): string => {
+  const normalized = message.toLocaleLowerCase();
+  if (normalized.includes("already in use")) {
     return "That name is already taken in this room. Please choose a different name.";
+  }
+  if (normalized.includes("host is offline")) {
+    return "Host is offline right now. You can join once the host comes back online.";
   }
   return message;
 };
@@ -293,7 +297,7 @@ export function GameClient() {
       revealCompletedTrick(parsed);
     });
     socket.on("game:error", (payload: { code: string; message: string }) => {
-      setError(payload.message);
+      setError(toUserFacingErrorMessage(payload.message));
     });
     socket.on("player:reconnected", (payload: { playerId: string }) => {
       if (payload.playerId === session.playerId) {
@@ -365,7 +369,7 @@ export function GameClient() {
       saveSession(nextSession);
       setSession(nextSession);
     } catch (err) {
-      setError(toLobbyJoinErrorMessage((err as Error).message));
+      setError(toUserFacingErrorMessage((err as Error).message));
     }
   };
 

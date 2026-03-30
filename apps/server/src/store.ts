@@ -86,7 +86,19 @@ export class RoomStore {
     );
 
     if (existingPlayer) {
-      throw new Error("Name is already in use");
+      if (existingPlayer.connected) {
+        throw new Error("Name is already in use");
+      }
+
+      existingPlayer.sessionToken = randomUUID();
+      return {
+        room,
+        response: {
+          roomCode: room.roomCode,
+          playerId: existingPlayer.playerId,
+          sessionToken: existingPlayer.sessionToken
+        }
+      };
     }
 
     if (room.locked) {
@@ -145,6 +157,12 @@ export class RoomStore {
     const player = room.players.find((entry) => entry.playerId === playerId);
     if (!player) {
       throw new Error("Player not found");
+    }
+
+    const host = room.players.find((entry) => entry.playerId === room.hostPlayerId);
+    const isHost = player.playerId === room.hostPlayerId;
+    if (!isHost && !host?.connected) {
+      throw new Error("Host is offline");
     }
 
     if (player.sessionToken !== sessionToken) {

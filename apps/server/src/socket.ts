@@ -67,7 +67,7 @@ interface CreateApiServerOptions {
   historyStore?: MatchHistoryStore;
 }
 
-const ROOM_IDLE_TTL_MS = Number(process.env.ROOM_IDLE_TTL_MS ?? 60 * 60 * 1000);
+const ROOM_IDLE_TTL_MS = Number(process.env.ROOM_IDLE_TTL_MS ?? 10 * 60 * 1000);
 const ROOM_PRUNE_INTERVAL_MS = Number(process.env.ROOM_PRUNE_INTERVAL_MS ?? 60 * 1000);
 
 export const createApiServer = (options: CreateApiServerOptions = {}): {

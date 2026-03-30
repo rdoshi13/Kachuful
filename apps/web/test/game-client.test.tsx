@@ -135,6 +135,34 @@ describe("GameClient", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows host-offline join error directly in lobby", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        json: async () => ({
+          error: "Host is offline",
+        }),
+      })),
+    );
+
+    render(<GameClient />);
+
+    fireEvent.change(screen.getByLabelText("name"), {
+      target: { value: "Guest" },
+    });
+    fireEvent.change(screen.getByLabelText("room-code"), {
+      target: { value: "ROOM01" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Join room" }));
+
+    expect(
+      await screen.findByText(
+        "Host is offline right now. You can join once the host comes back online.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows start game only when at least two players are in the room", async () => {
     localStorage.setItem(
       "kachuful:session",
@@ -259,6 +287,32 @@ describe("GameClient", () => {
     fireEvent.click(await screen.findByRole("button", { name: "End game" }));
     const endEvent = lastSocket?.emitted.find((entry) => entry.event === "game:end");
     expect(endEvent).toBeTruthy();
+  });
+
+  it("maps host-offline socket errors to friendly copy", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p2",
+        sessionToken: "token-2",
+        name: "Guest",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("game:error", {
+      code: "AUTH_FAILED",
+      message: "Host is offline",
+    });
+
+    expect(
+      await screen.findByText(
+        "Host is offline right now. You can join once the host comes back online.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows host lock toggle and emits room:lock_toggle", async () => {

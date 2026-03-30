@@ -111,7 +111,7 @@ describe("server integration", () => {
     expect(joined.playerId).not.toBe(created.playerId);
   });
 
-  it("rejects same-name HTTP join even when the previous seat is offline", async () => {
+  it("reuses offline seat when rejoining with the same name", async () => {
     const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
     const firstGuest = (
       await request(baseUrl)
@@ -120,18 +120,21 @@ describe("server integration", () => {
         .expect(200)
     ).body as RoomJoinResponse;
 
-    const duplicateJoin = await request(baseUrl)
-      .post(`/rooms/${host.roomCode}/join`)
-      .send({ name: "Guest" })
-      .expect(409);
+    const secondGuest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
 
     const room = store.getRoom(host.roomCode);
+    expect(secondGuest.playerId).toBe(firstGuest.playerId);
+    expect(secondGuest.sessionToken).not.toBe(firstGuest.sessionToken);
     expect(room?.players.map((player) => player.name)).toEqual(["Host", "Guest"]);
-    expect(duplicateJoin.body.error).toContain("already in use");
     expect(room?.players.filter((player) => player.playerId === firstGuest.playerId)).toHaveLength(1);
   });
 
-  it("rejects same-name HTTP join in locked room", async () => {
+  it("allows HTTP rejoin for same-name offline player in locked room", async () => {
     const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
     const guest = (
       await request(baseUrl)
@@ -163,12 +166,15 @@ describe("server integration", () => {
       guestSocket.disconnect();
     });
 
-    const rejoin = await request(baseUrl)
-      .post(`/rooms/${host.roomCode}/join`)
-      .send({ name: "Guest" })
-      .expect(409);
+    const rejoin = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
 
-    expect(rejoin.body.error).toContain("already in use");
+    expect(rejoin.playerId).toBe(guest.playerId);
+    expect(rejoin.sessionToken).not.toBe(guest.sessionToken);
   });
 
   it("lets host toggle room lock and rejects non-host toggles", async () => {
