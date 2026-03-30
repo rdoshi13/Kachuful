@@ -110,4 +110,32 @@ describe("RoomStore join behavior", () => {
       )
     ).not.toThrow();
   });
+
+  it("creates one-time transfer code and redeems same seat with new session token", () => {
+    const store = new RoomStore();
+    const host = store.createRoom("Host");
+    const guest = store.joinRoom(host.room.roomCode, "Guest");
+    store.markConnected(host.room.roomCode, host.response.playerId, "host-socket");
+
+    const transfer = store.createTransferCode(host.room.roomCode, guest.response.playerId, 60_000, 1_000);
+    const consumed = store.consumeTransferCode(host.room.roomCode, transfer.transferCode, 1_500);
+
+    expect(consumed.response.playerId).toBe(guest.response.playerId);
+    expect(consumed.response.sessionToken).not.toBe(guest.response.sessionToken);
+    expect(consumed.response.name).toBe("Guest");
+    expect(() => store.consumeTransferCode(host.room.roomCode, transfer.transferCode, 1_600)).toThrow(
+      "Invalid transfer code"
+    );
+  });
+
+  it("rejects expired transfer code redemption", () => {
+    const store = new RoomStore();
+    const host = store.createRoom("Host");
+
+    const transfer = store.createTransferCode(host.room.roomCode, host.response.playerId, 500, 100);
+
+    expect(() => store.consumeTransferCode(host.room.roomCode, transfer.transferCode, 700)).toThrow(
+      "Transfer code expired"
+    );
+  });
 });

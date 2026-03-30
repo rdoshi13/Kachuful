@@ -11,6 +11,15 @@ interface Room {
 }
 
 const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const TRANSFER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const TRANSFER_CODE_LENGTH = 6;
+const DEFAULT_TRANSFER_TTL_MS = 2 * 60 * 1000;
+
+interface TransferCodeEntry {
+  roomCode: string;
+  playerId: string;
+  expiresAt: number;
+}
 
 const createRoomCode = (): string => {
   let code = "";
@@ -27,6 +36,7 @@ export class RoomStore {
   private readonly rooms = new Map<string, Room>();
   private readonly socketIdentity = new Map<string, { roomCode: string; playerId: string }>();
   private readonly seenSocketJoin = new Set<string>();
+  private readonly transferCodes = new Map<string, TransferCodeEntry>();
 
   createRoom(name: string): { room: Room; response: RoomJoinResponse } {
     const cleanName = sanitizeName(name);
@@ -244,23 +254,6 @@ export class RoomStore {
     return removedRoomCodes;
   }
 
-  private deleteRoom(roomCode: string): void {
-    const normalizedRoomCode = roomCode.toUpperCase();
-    this.rooms.delete(normalizedRoomCode);
-
-    for (const [socketId, identity] of this.socketIdentity.entries()) {
-      if (identity.roomCode === normalizedRoomCode) {
-        this.socketIdentity.delete(socketId);
-      }
-    }
-
-    for (const key of this.seenSocketJoin) {
-      if (key.startsWith(`${normalizedRoomCode}:`)) {
-        this.seenSocketJoin.delete(key);
-      }
-    }
-  }
-
   getIdentityBySocket(socketId: string): { roomCode: string; playerId: string } | null {
     return this.socketIdentity.get(socketId) ?? null;
   }
@@ -307,5 +300,153 @@ export class RoomStore {
       }
     }
     return ids;
+  }
+
+  getSocketIdsForPlayer(roomCode: string, playerId: string): string[] {
+    const normalizedRoomCode = roomCode.toUpperCase();
+    const ids: string[] = [];
+    for (const [socketId, identity] of this.socketIdentity.entries()) {
+      if (identity.roomCode === normalizedRoomCode && identity.playerId === playerId) {
+        ids.push(socketId);
+      }
+    }
+    return ids;
+  }
+
+  createTransferCode(
+    roomCode: string,
+    playerId: string,
+    ttlMs = DEFAULT_TRANSFER_TTL_MS,
+    now = Date.now()
+  ): { transferCode: string; expiresAt: number } {
+    const room = this.getRoom(roomCode);
+    if (!room) {
+      throw new Error("Room not found");
+    }
+    const player = room.players.find((entry) => entry.playerId === playerId);
+    if (!player) {
+      throw new Error("Player not found");
+    }
+
+    this.removeExpiredTransferCodes(now);
+    this.deleteTransferCodesForPlayer(room.roomCode, player.playerId);
+
+    const expiresAt = now + Math.max(1, ttlMs);
+    let transferCode = this.generateTransferCode();
+    while (this.transferCodes.has(transferCode)) {
+      transferCode = this.generateTransferCode();
+    }
+    this.transferCodes.set(transferCode, {
+      roomCode: room.roomCode,
+      playerId: player.playerId,
+      expiresAt
+    });
+
+    return { transferCode, expiresAt };
+  }
+
+  consumeTransferCode(
+    roomCode: string,
+    transferCodeRaw: string,
+    now = Date.now()
+  ): { room: Room; response: RoomJoinResponse & { name: string } } {
+    const normalizedRoomCode = roomCode.toUpperCase();
+    const transferCode = transferCodeRaw.trim().toUpperCase();
+    if (!transferCode) {
+      throw new Error("Transfer code is required");
+    }
+
+    const transfer = this.transferCodes.get(transferCode);
+    if (!transfer || transfer.roomCode !== normalizedRoomCode) {
+      throw new Error("Invalid transfer code");
+    }
+    if (transfer.expiresAt <= now) {
+      this.transferCodes.delete(transferCode);
+      throw new Error("Transfer code expired");
+    }
+    this.removeExpiredTransferCodes(now);
+
+    const room = this.getRoom(normalizedRoomCode);
+    if (!room) {
+      this.transferCodes.delete(transferCode);
+      throw new Error("Room not found");
+    }
+
+    const player = room.players.find((entry) => entry.playerId === transfer.playerId);
+    if (!player) {
+      this.transferCodes.delete(transferCode);
+      throw new Error("Player not found");
+    }
+
+    const host = room.players.find((entry) => entry.playerId === room.hostPlayerId);
+    if (player.playerId !== room.hostPlayerId && !host?.connected) {
+      throw new Error("Host is offline");
+    }
+
+    player.sessionToken = randomUUID();
+    this.transferCodes.delete(transferCode);
+    this.deleteTransferCodesForPlayer(room.roomCode, player.playerId);
+
+    return {
+      room,
+      response: {
+        roomCode: room.roomCode,
+        playerId: player.playerId,
+        sessionToken: player.sessionToken,
+        name: player.name
+      }
+    };
+  }
+
+  private deleteTransferCodesForRoom(roomCode: string): void {
+    const normalizedRoomCode = roomCode.toUpperCase();
+    for (const [code, transfer] of this.transferCodes.entries()) {
+      if (transfer.roomCode === normalizedRoomCode) {
+        this.transferCodes.delete(code);
+      }
+    }
+  }
+
+  private deleteTransferCodesForPlayer(roomCode: string, playerId: string): void {
+    const normalizedRoomCode = roomCode.toUpperCase();
+    for (const [code, transfer] of this.transferCodes.entries()) {
+      if (transfer.roomCode === normalizedRoomCode && transfer.playerId === playerId) {
+        this.transferCodes.delete(code);
+      }
+    }
+  }
+
+  private removeExpiredTransferCodes(now: number): void {
+    for (const [code, transfer] of this.transferCodes.entries()) {
+      if (transfer.expiresAt <= now) {
+        this.transferCodes.delete(code);
+      }
+    }
+  }
+
+  private generateTransferCode(): string {
+    let code = "";
+    for (let index = 0; index < TRANSFER_CODE_LENGTH; index += 1) {
+      code += TRANSFER_CODE_ALPHABET[Math.floor(Math.random() * TRANSFER_CODE_ALPHABET.length)];
+    }
+    return code;
+  }
+
+  private deleteRoom(roomCode: string): void {
+    const normalizedRoomCode = roomCode.toUpperCase();
+    this.rooms.delete(normalizedRoomCode);
+    this.deleteTransferCodesForRoom(normalizedRoomCode);
+
+    for (const [socketId, identity] of this.socketIdentity.entries()) {
+      if (identity.roomCode === normalizedRoomCode) {
+        this.socketIdentity.delete(socketId);
+      }
+    }
+
+    for (const key of this.seenSocketJoin) {
+      if (key.startsWith(`${normalizedRoomCode}:`)) {
+        this.seenSocketJoin.delete(key);
+      }
+    }
   }
 }

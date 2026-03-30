@@ -8,7 +8,7 @@ import type {
   Suit,
   TrickPlay,
 } from "@kachuful/shared-types";
-import { createRoom, joinRoom } from "../lib/api";
+import { createRoom, joinRoom, transferRoomSeat } from "../lib/api";
 import {
   clearSession,
   loadSession,
@@ -76,6 +76,11 @@ interface TrickRevealState {
   winnerId: string;
 }
 
+interface TransferCodeState {
+  transferCode: string;
+  expiresAt: number;
+}
+
 interface HeroChip {
   id: string;
   label: string;
@@ -101,6 +106,12 @@ const toUserFacingErrorMessage = (message: string): string => {
   }
   if (normalized.includes("host is offline")) {
     return "Host is offline right now. You can join once the host comes back online.";
+  }
+  if (normalized.includes("invalid transfer code")) {
+    return "Transfer code is invalid. Generate a new one from your current device.";
+  }
+  if (normalized.includes("transfer code expired")) {
+    return "Transfer code expired. Generate a fresh code and try again.";
   }
   return message;
 };
@@ -164,6 +175,9 @@ export function GameClient() {
   const [revealedCompletedTrick, setRevealedCompletedTrick] =
     useState<TrickRevealState | null>(null);
   const [copiedRoomCode, setCopiedRoomCode] = useState(false);
+  const [transferCodeInput, setTransferCodeInput] = useState("");
+  const [activeTransferCode, setActiveTransferCode] =
+    useState<TransferCodeState | null>(null);
 
   const socketRef = useRef<GameSocket | null>(null);
   const trickRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -299,6 +313,18 @@ export function GameClient() {
     socket.on("game:error", (payload: { code: string; message: string }) => {
       setError(toUserFacingErrorMessage(payload.message));
     });
+    socket.on("session:transfer_code", (payload: TransferCodeState) => {
+      if (
+        !payload
+        || typeof payload.transferCode !== "string"
+        || typeof payload.expiresAt !== "number"
+      ) {
+        return;
+      }
+      setActiveTransferCode(payload);
+      setInfo("Transfer code generated. Enter it on your new device.");
+      setError(null);
+    });
     socket.on("player:reconnected", (payload: { playerId: string }) => {
       if (payload.playerId === session.playerId) {
         setInfo("Reconnected to your seat.");
@@ -373,6 +399,38 @@ export function GameClient() {
     }
   };
 
+  const transferSeatFlow = async () => {
+    try {
+      setError(null);
+      setInfo(null);
+      const code = joinCode.trim().toUpperCase();
+      const transferCode = transferCodeInput.trim().toUpperCase();
+      if (!code) {
+        setError("Room code is required.");
+        return;
+      }
+      if (!transferCode) {
+        setError("Transfer code is required.");
+        return;
+      }
+      const response = await transferRoomSeat(code, transferCode);
+      const nextSession: StoredSession = {
+        roomCode: response.roomCode,
+        playerId: response.playerId,
+        sessionToken: response.sessionToken,
+        name: response.name,
+      };
+      saveSession(nextSession);
+      setSession(nextSession);
+      setName(response.name);
+      setJoinCode(response.roomCode);
+      setTransferCodeInput("");
+      setInfo("Seat transferred to this device.");
+    } catch (err) {
+      setError(toUserFacingErrorMessage((err as Error).message));
+    }
+  };
+
   const leaveSession = () => {
     clearSession();
     socketRef.current?.disconnect();
@@ -387,6 +445,8 @@ export function GameClient() {
     setSelectedCompletedRoundIndex(null);
     setRevealedCompletedTrick(null);
     setCopiedRoomCode(false);
+    setTransferCodeInput("");
+    setActiveTransferCode(null);
     previousGameStateRef.current = null;
     clearTrickRevealTimeout();
     clearAutoSummaryTimeout();
@@ -670,6 +730,31 @@ export function GameClient() {
               Join room
             </button>
           </form>
+          <form
+            className="lobby-card"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void transferSeatFlow();
+            }}
+          >
+            <h3>Switch Device</h3>
+            <p>Move your current seat using a one-time transfer code.</p>
+            <label className="lobby-label" htmlFor="transfer-code-input">
+              Transfer code
+            </label>
+            <input
+              id="transfer-code-input"
+              aria-label="transfer-code"
+              placeholder="Transfer code"
+              value={transferCodeInput}
+              onChange={(event) =>
+                setTransferCodeInput(event.target.value.toUpperCase())
+              }
+            />
+            <button className="btn-warning" type="submit">
+              Use transfer code
+            </button>
+          </form>
         </div>
         {error ? <p className="error">{error}</p> : null}
       </section>
@@ -701,6 +786,15 @@ export function GameClient() {
             type="button"
           >
             How to Play
+          </button>
+          <button
+            className="secondary btn-warning-soft"
+            onClick={() => {
+              socketRef.current?.emit("session:transfer_request");
+            }}
+            type="button"
+          >
+            Switch device
           </button>
           <button
             className="secondary btn-info"
@@ -1495,6 +1589,40 @@ export function GameClient() {
                 </ul>
               </details>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {activeTransferCode ? (
+        <div
+          className="modal-backdrop"
+          onClick={() => setActiveTransferCode(null)}
+          role="presentation"
+        >
+          <div
+            aria-modal="true"
+            className="modal-card"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+          >
+            <div className="modal-card__header">
+              <h3>Switch Device</h3>
+              <button
+                className="secondary"
+                onClick={() => setActiveTransferCode(null)}
+                type="button"
+              >
+                Close
+              </button>
+            </div>
+            <p>Enter this code on your new device in the Switch Device card.</p>
+            <p className="room-status-line">
+              Code: <strong>{activeTransferCode.transferCode}</strong>
+            </p>
+            <p>
+              Expires:{" "}
+              {new Date(activeTransferCode.expiresAt).toLocaleTimeString()}
+            </p>
           </div>
         </div>
       ) : null}

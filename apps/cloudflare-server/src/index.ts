@@ -5,11 +5,16 @@ import type {
   GameState,
   MatchHistoryEntry,
   RoomJoinResponse,
+  RoomTransferResponse,
   RoomPlayer,
-  RoomStatePayload
+  RoomStatePayload,
+  TransferSeatRequest
 } from "@kachuful/shared-types";
 
 const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const TRANSFER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const TRANSFER_CODE_LENGTH = 6;
+const TRANSFER_CODE_TTL_MS = 2 * 60 * 1000;
 const MAX_PLAYERS_PER_ROOM = 6;
 const MAX_HISTORY_PER_ROOM = 100;
 const MATCH_HISTORY_LIMIT_MAX = 100;
@@ -31,10 +36,17 @@ interface SocketIdentity {
   playerId: string;
 }
 
+interface TransferCodeEntry {
+  roomCode: string;
+  playerId: string;
+  expiresAt: number;
+}
+
 interface PersistedState {
   rooms: Room[];
   historyByRoom: Record<string, MatchHistoryEntry[]>;
   seenSocketJoin: string[];
+  transferCodes: Record<string, TransferCodeEntry>;
 }
 
 interface WireMessage {
@@ -150,6 +162,7 @@ const upgradeHeaderIsWebSocket = (request: Request): boolean =>
 export class GameHub extends DurableObject<Env> {
   private rooms = new Map<string, Room>();
   private historyByRoom: Record<string, MatchHistoryEntry[]> = {};
+  private transferCodes = new Map<string, TransferCodeEntry>();
   private readonly socketIdentity = new Map<WebSocket, SocketIdentity>();
   private readonly roomSockets = new Map<string, Set<WebSocket>>();
   private seenSocketJoin = new Set<string>();
@@ -166,6 +179,13 @@ export class GameHub extends DurableObject<Env> {
       );
       this.historyByRoom = persisted.historyByRoom ?? {};
       this.seenSocketJoin = new Set(persisted.seenSocketJoin ?? []);
+      this.transferCodes = new Map(
+        Object.entries(persisted.transferCodes ?? {}).map(([code, entry]) => [
+          code.toUpperCase(),
+          entry
+        ])
+      );
+      this.removeExpiredTransferCodes();
     });
   }
 
@@ -176,6 +196,7 @@ export class GameHub extends DurableObject<Env> {
 
     const url = new URL(request.url);
     const joinMatch = url.pathname.match(/^\/rooms\/([^/]+)\/join$/);
+    const transferMatch = url.pathname.match(/^\/rooms\/([^/]+)\/transfer$/);
     const historyMatch = url.pathname.match(/^\/rooms\/([^/]+)\/history$/);
 
     if (request.method === "GET" && url.pathname === "/health") {
@@ -192,6 +213,10 @@ export class GameHub extends DurableObject<Env> {
 
     if (request.method === "POST" && joinMatch) {
       return this.handleJoinRoom(request, joinMatch[1] ?? "");
+    }
+
+    if (request.method === "POST" && transferMatch) {
+      return this.handleTransferSeat(request, transferMatch[1] ?? "");
     }
 
     if (request.method === "GET" && historyMatch) {
@@ -346,6 +371,62 @@ export class GameHub extends DurableObject<Env> {
     });
   }
 
+  private async handleTransferSeat(request: Request, roomCodeParam: string): Promise<Response> {
+    const roomCode = roomCodeParam.toUpperCase();
+    const body = await parseJsonBody<Partial<TransferSeatRequest>>(request);
+    const transferCodeRaw = body?.transferCode;
+    if (typeof transferCodeRaw !== "string" || !transferCodeRaw.trim()) {
+      return jsonResponse(400, { error: "Transfer code is required" });
+    }
+
+    const now = Date.now();
+    const transferCode = transferCodeRaw.trim().toUpperCase();
+    const transfer = this.transferCodes.get(transferCode);
+    if (!transfer || transfer.roomCode !== roomCode) {
+      return jsonResponse(409, { error: "Invalid transfer code" });
+    }
+    if (transfer.expiresAt <= now) {
+      this.transferCodes.delete(transferCode);
+      await this.persistState();
+      return jsonResponse(409, { error: "Transfer code expired" });
+    }
+    this.removeExpiredTransferCodes(now);
+
+    const room = this.rooms.get(roomCode);
+    if (!room) {
+      this.transferCodes.delete(transferCode);
+      await this.persistState();
+      return jsonResponse(404, { error: "Room not found" });
+    }
+
+    const player = room.players.find((entry) => entry.playerId === transfer.playerId);
+    if (!player) {
+      this.transferCodes.delete(transferCode);
+      await this.persistState();
+      return jsonResponse(404, { error: "Player not found" });
+    }
+
+    const host = room.players.find((entry) => entry.playerId === room.hostPlayerId);
+    if (player.playerId !== room.hostPlayerId && !host?.connected) {
+      return jsonResponse(409, { error: "Host is offline" });
+    }
+
+    player.sessionToken = crypto.randomUUID();
+    this.transferCodes.delete(transferCode);
+    this.deleteTransferCodesForPlayer(room.roomCode, player.playerId);
+
+    await this.persistState();
+    this.disconnectPlayerSockets(room.roomCode, player.playerId);
+
+    const response: RoomTransferResponse = {
+      roomCode: room.roomCode,
+      playerId: player.playerId,
+      sessionToken: player.sessionToken,
+      name: player.name
+    };
+    return jsonResponse(200, response);
+  }
+
   private async handleSocketMessage(socket: WebSocket, rawData: string | ArrayBuffer): Promise<void> {
     const rawString = typeof rawData === "string" ? rawData : new TextDecoder().decode(rawData);
     let message: WireMessage;
@@ -364,6 +445,9 @@ export class GameHub extends DurableObject<Env> {
     switch (message.event) {
       case "room:join":
         await this.handleRoomJoin(socket, message.payload);
+        return;
+      case "session:transfer_request":
+        await this.handleTransferRequest(socket);
         return;
       case "game:start":
         await this.handleGameStart(socket);
@@ -389,6 +473,46 @@ export class GameHub extends DurableObject<Env> {
       default:
         this.emitGameError(socket, `Unsupported event: ${message.event}`, "BAD_EVENT");
     }
+  }
+
+  private async handleTransferRequest(socket: WebSocket): Promise<void> {
+    const identity = this.socketIdentity.get(socket);
+    if (!identity) {
+      this.emitGameError(socket, "Join room first", "NOT_JOINED");
+      return;
+    }
+
+    const room = this.rooms.get(identity.roomCode);
+    if (!room) {
+      this.emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+      return;
+    }
+    const player = room.players.find((entry) => entry.playerId === identity.playerId);
+    if (!player) {
+      this.emitGameError(socket, "Player not found", "NOT_JOINED");
+      return;
+    }
+
+    const now = Date.now();
+    this.removeExpiredTransferCodes(now);
+    this.deleteTransferCodesForPlayer(room.roomCode, player.playerId);
+
+    const expiresAt = now + TRANSFER_CODE_TTL_MS;
+    let transferCode = this.generateTransferCode();
+    while (this.transferCodes.has(transferCode)) {
+      transferCode = this.generateTransferCode();
+    }
+    this.transferCodes.set(transferCode, {
+      roomCode: room.roomCode,
+      playerId: player.playerId,
+      expiresAt
+    });
+
+    await this.persistState();
+    this.emit(socket, "session:transfer_code", {
+      transferCode,
+      expiresAt
+    });
   }
 
   private async handleSocketClose(socket: WebSocket): Promise<void> {
@@ -832,6 +956,45 @@ export class GameHub extends DurableObject<Env> {
     }
   }
 
+  private disconnectPlayerSockets(roomCodeParam: string, playerId: string): void {
+    const roomCode = roomCodeParam.toUpperCase();
+    for (const [socket, identity] of this.socketIdentity.entries()) {
+      if (identity.roomCode !== roomCode || identity.playerId !== playerId) {
+        continue;
+      }
+      try {
+        socket.close(4001, "Seat transferred");
+      } catch {
+        // Ignore close errors from stale sockets.
+      }
+    }
+  }
+
+  private deleteTransferCodesForPlayer(roomCodeParam: string, playerId: string): void {
+    const roomCode = roomCodeParam.toUpperCase();
+    for (const [code, entry] of this.transferCodes.entries()) {
+      if (entry.roomCode === roomCode && entry.playerId === playerId) {
+        this.transferCodes.delete(code);
+      }
+    }
+  }
+
+  private removeExpiredTransferCodes(now = Date.now()): void {
+    for (const [code, entry] of this.transferCodes.entries()) {
+      if (entry.expiresAt <= now) {
+        this.transferCodes.delete(code);
+      }
+    }
+  }
+
+  private generateTransferCode(): string {
+    let code = "";
+    for (let index = 0; index < TRANSFER_CODE_LENGTH; index += 1) {
+      code += TRANSFER_CODE_ALPHABET[Math.floor(Math.random() * TRANSFER_CODE_ALPHABET.length)];
+    }
+    return code;
+  }
+
   private emit(socket: WebSocket, event: string, payload?: unknown): void {
     try {
       if (socket.readyState !== 1) {
@@ -852,7 +1015,8 @@ export class GameHub extends DurableObject<Env> {
     const snapshot: PersistedState = {
       rooms: [...this.rooms.values()],
       historyByRoom: this.historyByRoom,
-      seenSocketJoin: [...this.seenSocketJoin]
+      seenSocketJoin: [...this.seenSocketJoin],
+      transferCodes: Object.fromEntries(this.transferCodes.entries())
     };
     await this.ctx.storage.put("state", snapshot);
   }

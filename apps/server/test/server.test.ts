@@ -352,11 +352,16 @@ describe("server integration", () => {
         .expect(200)
     ).body as RoomJoinResponse;
 
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
     const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
-    sockets.push(guestSocket);
-    await waitForConnect(guestSocket);
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+    hostSocket.emit("room:join", host);
     guestSocket.emit("room:join", guest);
-    await waitForEvent<RoomStatePayload>(guestSocket, "room:state");
+    await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
 
     const duplicateJoin = await request(baseUrl)
       .post(`/rooms/${host.roomCode}/join`)
@@ -460,6 +465,75 @@ describe("server integration", () => {
     expect(roomStateAfterReconnect.players).toHaveLength(2);
     expect(roomStateAfterReconnect.players.filter((player) => player.playerId === guest.playerId)).toHaveLength(1);
     expect(Array.isArray(reconnectGameState.currentRound?.viewerHand ?? [])).toBe(true);
+  });
+
+  it("transfers seat to new device with one-time code", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+    await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
+
+    const transferCodePromise = waitForEvent<{ transferCode: string; expiresAt: number }>(
+      guestSocket,
+      "session:transfer_code"
+    );
+    guestSocket.emit("session:transfer_request");
+    const transferCodePayload = await transferCodePromise;
+    expect(transferCodePayload.transferCode).toHaveLength(6);
+
+    const guestDisconnectPromise = waitForEvent<string>(guestSocket, "disconnect");
+    const transferResponse = await request(baseUrl)
+      .post(`/rooms/${host.roomCode}/transfer`)
+      .send({ transferCode: transferCodePayload.transferCode })
+      .expect(200);
+    await guestDisconnectPromise;
+
+    expect(transferResponse.body.playerId).toBe(guest.playerId);
+    expect(transferResponse.body.sessionToken).not.toBe(guest.sessionToken);
+    expect(transferResponse.body.name).toBe("Guest");
+
+    const transferredSeat = transferResponse.body as RoomJoinResponse & { name: string };
+    const replacementSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(replacementSocket);
+    await waitForConnect(replacementSocket);
+    replacementSocket.emit("room:join", transferredSeat);
+
+    const replacementRoomState = await waitForEvent<RoomStatePayload>(replacementSocket, "room:state");
+    expect(replacementRoomState.players).toHaveLength(2);
+    expect(
+      replacementRoomState.players.filter((player) => player.playerId === guest.playerId)
+    ).toHaveLength(1);
+
+    const expiredReuse = await request(baseUrl)
+      .post(`/rooms/${host.roomCode}/transfer`)
+      .send({ transferCode: transferCodePayload.transferCode })
+      .expect(409);
+    expect(expiredReuse.body.error).toContain("Invalid transfer code");
+  });
+
+  it("rejects invalid transfer code redemption", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+
+    const invalidTransfer = await request(baseUrl)
+      .post(`/rooms/${host.roomCode}/transfer`)
+      .send({ transferCode: "BAD999" })
+      .expect(409);
+    expect(invalidTransfer.body.error).toContain("Invalid transfer code");
   });
 
   it("allows host to restart after game completion", async () => {

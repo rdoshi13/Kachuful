@@ -168,10 +168,18 @@ export interface JoinRoomRequest {
   name: string;
 }
 
+export interface TransferSeatRequest {
+  transferCode: string;
+}
+
 export interface RoomJoinResponse {
   roomCode: string;
   playerId: string;
   sessionToken: string;
+}
+
+export interface RoomTransferResponse extends RoomJoinResponse {
+  name: string;
 }
 
 export interface MatchHistoryPlayerResult extends PlayerRef {

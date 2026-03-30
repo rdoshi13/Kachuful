@@ -107,6 +107,92 @@ describe("GameClient", () => {
     });
   });
 
+  it("requests transfer code from room actions and renders it in modal", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: false,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: true },
+      ],
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Switch device" }));
+
+    const transferRequestEvent = lastSocket?.emitted.find(
+      (entry) => entry.event === "session:transfer_request",
+    );
+    expect(transferRequestEvent).toBeTruthy();
+
+    lastSocket?.trigger("session:transfer_code", {
+      transferCode: "AB12CD",
+      expiresAt: 1893456000000,
+    });
+
+    expect(await screen.findByText("Switch Device")).toBeInTheDocument();
+    expect(await screen.findByText("Code:")).toBeInTheDocument();
+    expect(await screen.findByText("AB12CD")).toBeInTheDocument();
+  });
+
+  it("redeems transfer code from lobby and restores seat session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/rooms/ROOM01/transfer")) {
+          return {
+            ok: true,
+            json: async () => ({
+              roomCode: "ROOM01",
+              playerId: "p1",
+              sessionToken: "new-token",
+              name: "Host",
+            }),
+          };
+        }
+        throw new Error(`Unexpected request: ${url}`);
+      }),
+    );
+
+    render(<GameClient />);
+
+    fireEvent.change(screen.getByLabelText("room-code"), {
+      target: { value: "ROOM01" },
+    });
+    fireEvent.change(screen.getByLabelText("transfer-code"), {
+      target: { value: "AB12CD" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Use transfer code" }));
+
+    await screen.findByText("Room ROOM01");
+    expect(lastSocket).not.toBeNull();
+
+    const storedSession = JSON.parse(
+      localStorage.getItem("kachuful:session") ?? "{}",
+    );
+    expect(storedSession).toMatchObject({
+      roomCode: "ROOM01",
+      playerId: "p1",
+      sessionToken: "new-token",
+      name: "Host",
+    });
+  });
+
   it("shows duplicate-name join error directly in lobby", async () => {
     vi.stubGlobal(
       "fetch",
