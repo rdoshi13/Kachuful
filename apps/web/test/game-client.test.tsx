@@ -287,6 +287,49 @@ describe("GameClient", () => {
     expect(await screen.findByRole("button", { name: "Start game" })).toBeInTheDocument();
   });
 
+  it("toggles room details from the room header dropdown", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("room:state", {
+      roomCode: "ROOM01",
+      hostPlayerId: "p1",
+      locked: false,
+      players: [
+        { playerId: "p1", name: "Host", connected: true },
+        { playerId: "p2", name: "Guest", connected: true },
+      ],
+    });
+
+    const roomInfoButton = await screen.findByRole("button", {
+      name: /Room info/i,
+    });
+    expect(await screen.findByRole("button", { name: "How to Play" })).toBeInTheDocument();
+    expect(await screen.findByText(/Lobby open/)).toBeInTheDocument();
+
+    fireEvent.click(roomInfoButton);
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "How to Play" })).toBeNull();
+    });
+    expect(screen.queryByText(/Lobby open/)).toBeNull();
+
+    fireEvent.click(await screen.findByRole("button", { name: /Room info/i }));
+    expect(await screen.findByRole("button", { name: "How to Play" })).toBeInTheDocument();
+    expect(await screen.findByText(/Lobby open/)).toBeInTheDocument();
+  });
+
   it("copies room code to clipboard from room header button", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -1071,7 +1114,7 @@ describe("GameClient", () => {
       name: "View winning tricks for Host",
     });
     const hostRow = hostWinningButton.closest(".round-stats__row");
-    expect(hostRow).toHaveClass("round-stats__row--self");
+    expect(hostRow).not.toHaveClass("round-stats__row--self");
     expect(hostRow).toHaveTextContent("Hands needed: On target");
     expect(await screen.findByText("Playing now")).toBeInTheDocument();
     const guestWinningButton = await screen.findByRole("button", {

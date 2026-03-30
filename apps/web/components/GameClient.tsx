@@ -22,6 +22,7 @@ const bidValues = (max: number): number[] =>
   Array.from({ length: max + 1 }, (_, index) => index);
 const TRICK_REVEAL_DURATION_MS = 2000;
 const AUTO_SUMMARY_DELAY_MS = 2000;
+const INFO_MESSAGE_DURATION_MS = 3000;
 const TRUMP_SUIT_LABEL: Record<Suit, string> = {
   S: "Spades",
   D: "Diamonds",
@@ -241,6 +242,8 @@ export function GameClient() {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showAllHeroChips, setShowAllHeroChips] = useState(false);
   const [isHandOrdered, setIsHandOrdered] = useState(false);
+  const [isRoomInfoExpanded, setIsRoomInfoExpanded] = useState(true);
+  const [isRoundTrackerExpanded, setIsRoundTrackerExpanded] = useState(true);
   const [revealedCompletedTrick, setRevealedCompletedTrick] =
     useState<TrickRevealState | null>(null);
   const [copiedRoomCode, setCopiedRoomCode] = useState(false);
@@ -257,6 +260,9 @@ export function GameClient() {
     null,
   );
   const copiedRoomCodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const infoMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const turnBannerPokeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -294,6 +300,21 @@ export function GameClient() {
     }
     clearTimeout(copiedRoomCodeTimeoutRef.current);
     copiedRoomCodeTimeoutRef.current = null;
+  };
+  const clearInfoMessageTimeout = () => {
+    if (!infoMessageTimeoutRef.current) {
+      return;
+    }
+    clearTimeout(infoMessageTimeoutRef.current);
+    infoMessageTimeoutRef.current = null;
+  };
+  const showTimedInfoMessage = (message: string) => {
+    clearInfoMessageTimeout();
+    setInfo(message);
+    infoMessageTimeoutRef.current = setTimeout(() => {
+      setInfo(null);
+      infoMessageTimeoutRef.current = null;
+    }, INFO_MESSAGE_DURATION_MS);
   };
   const clearTurnBannerPokeTimeout = () => {
     if (!turnBannerPokeTimeoutRef.current) {
@@ -402,7 +423,7 @@ export function GameClient() {
         return;
       }
       setActiveTransferCode(payload);
-      setInfo("Transfer code generated. Enter it on your new device.");
+      showTimedInfoMessage("Transfer code generated. Enter it on your new device.");
       setError(null);
     });
     socket.on("turn:poked", (payload: TurnPokedPayload) => {
@@ -425,7 +446,7 @@ export function GameClient() {
     });
     socket.on("player:reconnected", (payload: { playerId: string }) => {
       if (payload.playerId === session.playerId) {
-        setInfo("Reconnected to your seat.");
+        showTimedInfoMessage("Reconnected to your seat.");
       }
     });
 
@@ -433,6 +454,7 @@ export function GameClient() {
       clearTrickRevealTimeout();
       clearAutoSummaryTimeout();
       clearCopiedRoomCodeTimeout();
+      clearInfoMessageTimeout();
       clearTurnBannerPokeTimeout();
       socket.disconnect();
       socketRef.current = null;
@@ -524,7 +546,7 @@ export function GameClient() {
       setName(response.name);
       setJoinCode(response.roomCode);
       setTransferCodeInput("");
-      setInfo("Seat transferred to this device.");
+      showTimedInfoMessage("Seat transferred to this device.");
     } catch (err) {
       setError(toUserFacingErrorMessage((err as Error).message));
     }
@@ -550,6 +572,7 @@ export function GameClient() {
     clearTrickRevealTimeout();
     clearAutoSummaryTimeout();
     clearCopiedRoomCodeTimeout();
+    clearInfoMessageTimeout();
     clearTurnBannerPokeTimeout();
   };
 
@@ -899,94 +922,239 @@ export function GameClient() {
           >
             {copiedRoomCode ? "Copied" : "Copy code"}
           </button>
-        </div>
-        <div className="row room-actions">
-          <button
-            className="secondary btn-info-soft"
-            onClick={() => setShowHowToPlay(true)}
-            type="button"
-          >
-            How to Play
-          </button>
-          <button
-            className="secondary btn-warning-soft"
-            onClick={() => {
-              socketRef.current?.emit("session:transfer_request");
-            }}
-            type="button"
-          >
-            Switch device
-          </button>
-          <button className="secondary btn-danger-soft" onClick={leaveSession} type="button">
-            Leave
-          </button>
-          {isHost && roomState ? (
+          {(roomState || gameState) ? (
             <button
-              className={`secondary ${
-                roomState.locked ? "btn-success-soft" : "btn-warning-soft"
-              }`}
-              onClick={() => {
-                socketRef.current?.emit("room:lock_toggle", {
-                  locked: !roomState.locked,
-                });
-              }}
+              aria-expanded={isRoomInfoExpanded}
+              className="secondary btn-info-soft"
+              onClick={() => setIsRoomInfoExpanded((current) => !current)}
               type="button"
             >
-              {roomState.locked ? "Unlock room" : "Lock room"}
-            </button>
-          ) : null}
-          {canEndGame ? (
-            <button
-              className="btn-danger room-actions__primary"
-              onClick={() => {
-                socketRef.current?.emit("game:end");
-              }}
-              type="button"
-            >
-              End game
-            </button>
-          ) : null}
-          {canStart ? (
-            <button
-              className="btn-success room-actions__primary"
-              onClick={() => {
-                socketRef.current?.emit("game:start");
-              }}
-              type="button"
-            >
-              Start game
+              Room info {isRoomInfoExpanded ? "▴" : "▾"}
             </button>
           ) : null}
         </div>
-        <p className="room-status-line">
-          {gameStatusLabel}
-          {roomState ? ` • ${roomLockLabel}` : ""}
-        </p>
-        {roomState ? (
-          <div className="room-player-list">
-            {roomState.players.map((player) => {
-              const isSpectator =
-                isMatchInProgress && !currentGamePlayerIds.has(player.playerId);
-              return (
-                <p className="room-player" key={player.playerId}>
-                  <span
-                    aria-label={`${player.name} ${player.connected ? "online" : "offline"}`}
-                    className={`status-dot ${player.connected ? "status-dot--online" : "status-dot--offline"}`}
-                    role="img"
-                  />
-                  <span>{player.name}</span>
-                  {player.playerId === roomState.hostPlayerId ? (
-                    <span className="pill">host</span>
-                  ) : null}
-                  {isSpectator ? <span className="pill">spectator</span> : null}
-                </p>
-              );
-            })}
-          </div>
+        {isRoomInfoExpanded ? (
+          <>
+            <div className="row room-actions">
+              <button
+                className="secondary btn-info-soft"
+                onClick={() => setShowHowToPlay(true)}
+                type="button"
+              >
+                How to Play
+              </button>
+              <button
+                className="secondary btn-warning-soft"
+                onClick={() => {
+                  socketRef.current?.emit("session:transfer_request");
+                }}
+                type="button"
+              >
+                Switch device
+              </button>
+              <button className="secondary btn-danger-soft" onClick={leaveSession} type="button">
+                Leave
+              </button>
+              {isHost && roomState ? (
+                <button
+                  className={`secondary ${
+                    roomState.locked ? "btn-success-soft" : "btn-warning-soft"
+                  }`}
+                  onClick={() => {
+                    socketRef.current?.emit("room:lock_toggle", {
+                      locked: !roomState.locked,
+                    });
+                  }}
+                  type="button"
+                >
+                  {roomState.locked ? "Unlock room" : "Lock room"}
+                </button>
+              ) : null}
+              {canEndGame ? (
+                <button
+                  className="btn-danger room-actions__primary"
+                  onClick={() => {
+                    socketRef.current?.emit("game:end");
+                  }}
+                  type="button"
+                >
+                  End game
+                </button>
+              ) : null}
+              {canStart ? (
+                <button
+                  className="btn-success room-actions__primary"
+                  onClick={() => {
+                    socketRef.current?.emit("game:start");
+                  }}
+                  type="button"
+                >
+                  Start game
+                </button>
+              ) : null}
+            </div>
+            <p className="room-status-line">
+              {gameStatusLabel}
+              {roomState ? ` • ${roomLockLabel}` : ""}
+            </p>
+            {roomState ? (
+              <div className="room-player-list">
+                {roomState.players.map((player) => {
+                  const isSpectator =
+                    isMatchInProgress && !currentGamePlayerIds.has(player.playerId);
+                  return (
+                    <p className="room-player" key={player.playerId}>
+                      <span
+                        aria-label={`${player.name} ${player.connected ? "online" : "offline"}`}
+                        className={`status-dot ${player.connected ? "status-dot--online" : "status-dot--offline"}`}
+                        role="img"
+                      />
+                      <span>{player.name}</span>
+                      {player.playerId === roomState.hostPlayerId ? (
+                        <span className="pill">host</span>
+                      ) : null}
+                      {isSpectator ? <span className="pill">spectator</span> : null}
+                    </p>
+                  );
+                })}
+              </div>
+            ) : null}
+            {info ? <p>{info}</p> : null}
+            {error ? <p className="error">{error}</p> : null}
+          </>
         ) : null}
-        {info ? <p>{info}</p> : null}
-        {error ? <p className="error">{error}</p> : null}
       </section>
+      ) : null}
+
+      {gameState ? (
+        <section className="round-info-strip">
+          <div className="round-info-strip__panel">
+            <div className="round-info-strip__meta">
+              <div className="round-info-strip__meta-content">
+                <div className="round-info-strip__header">
+                  <h3>Round Info</h3>
+                </div>
+                <div className="round-info-strip__stats">
+                  <span className="round-info-pill round-info-pill--round">
+                    Round <strong>{visibleRoundNumber}</strong>
+                  </span>
+                  <span className="round-info-pill">
+                    No. of cards:{" "}
+                    <strong>{currentRound?.cardsPerPlayer ?? "-"}</strong>
+                  </span>
+                  <span className="round-info-pill">
+                    Trump:{" "}
+                    <strong>{trumpSuit ? getTrumpSuitDisplay(trumpSuit) : "-"}</strong>
+                  </span>
+                </div>
+              </div>
+              <div className="round-info-strip__preview">
+                {trumpPreviewCardId ? (
+                  <div
+                    aria-label={`Trump preview ${trumpPreviewCardId}`}
+                    className="round-info-strip__trump-card"
+                  >
+                    <PlayingCard cardId={trumpPreviewCardId} />
+                  </div>
+                ) : (
+                  <p className="round-info-strip__empty">No active round.</p>
+                )}
+              </div>
+            </div>
+            <div className="round-info-strip__tracker">
+              <div className="round-info-strip__tracker-header">
+                <h3>Round Tracker</h3>
+                <button
+                  aria-expanded={isRoundTrackerExpanded}
+                  className="secondary btn-info-soft round-info-strip__tracker-toggle"
+                  onClick={() =>
+                    setIsRoundTrackerExpanded((current) => !current)
+                  }
+                  type="button"
+                >
+                  {isRoundTrackerExpanded ? "Hide ▴" : "Show ▾"}
+                </button>
+              </div>
+              <p className="round-stats__hint">
+                Current round bids and tricks won.
+              </p>
+              {isRoundTrackerExpanded ? (
+                currentRound ? (
+                  <div className="round-stats__list">
+                    {roundTrackerPlayers.map((player) => {
+                      const bidRaw = currentRound.bids[player.playerId];
+                      const bid = typeof bidRaw === "number" ? bidRaw : null;
+                      const won = currentRound.tricksWon[player.playerId] ?? 0;
+                      const isActiveTurn = activeTurnPlayerId === player.playerId;
+                      const handsNeeded = bid === null ? 0 : bid - won;
+                      const handsNeededText =
+                        bid === null
+                          ? "-"
+                          : handsNeeded > 0
+                            ? `Need ${handsNeeded}`
+                            : handsNeeded < 0
+                              ? `Over by ${Math.abs(handsNeeded)}`
+                              : "On target";
+                      const handsNeededClass =
+                        bid === null
+                          ? "round-stats__needed--unknown"
+                          : handsNeeded > 0
+                            ? "round-stats__needed--need"
+                            : handsNeeded < 0
+                              ? "round-stats__needed--over"
+                              : "round-stats__needed--on-target";
+                      const wonCount = currentRound.trickHistory.filter(
+                        (trick) => trick.winnerId === player.playerId,
+                      ).length;
+                      return (
+                        <div
+                          className={`round-stats__row${
+                            isActiveTurn ? " round-stats__row--active-turn" : ""
+                          }`}
+                          key={player.playerId}
+                        >
+                          <div className="round-stats__name-row">
+                            <p className="round-stats__name">{player.name}</p>
+                            {isActiveTurn ? (
+                              <span className="pill round-stats__turn-pill">
+                                Playing now
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="round-stats__meta">Bid: {bid ?? "-"}</p>
+                          <p className="round-stats__meta">Won: {won}</p>
+                          <p className={`round-stats__needed ${handsNeededClass}`}>
+                            Hands needed: {handsNeededText}
+                          </p>
+                          <button
+                            aria-label={`View winning tricks for ${player.name}`}
+                            className="secondary btn-info-soft round-stats__button"
+                            disabled={wonCount === 0}
+                            onClick={() => setSelectedWinnerPlayerId(player.playerId)}
+                            type="button"
+                          >
+                            Winning tricks ({wonCount})
+                          </button>
+                          <button
+                            aria-label={`View round summary for ${player.name}`}
+                            className="secondary btn-info-soft round-stats__button"
+                            disabled={gameState.completedRounds.length === 0}
+                            onClick={() => setSelectedSummaryPlayerId(player.playerId)}
+                            type="button"
+                          >
+                            Round summary
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="round-info-strip__empty">No active round.</p>
+                )
+              ) : null}
+            </div>
+          </div>
+        </section>
       ) : null}
 
       {gameState ? (
@@ -1125,226 +1293,114 @@ export function GameClient() {
           </section>
 
           <section className="game-details-shell">
-            <div className="game-details-layout">
-              <div className="game-score-panel">
-                <h3>Scoreboard</h3>
-                <div className="table-scroll table-scroll--wide">
-                  <table className="score-table">
-                    <thead>
-                      <tr>
-                        <th>Player</th>
-                        <th>Score</th>
+            <div className="game-score-panel">
+              <h3>Scoreboard</h3>
+              <div className="table-scroll table-scroll--wide">
+                <table className="score-table">
+                  <thead>
+                    <tr>
+                      <th>Player</th>
+                      <th>Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scoreboard.map((row) => (
+                      <tr key={row.playerId}>
+                        <td>{row.name}</td>
+                        <td>{row.score}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {scoreboard.map((row) => (
-                        <tr key={row.playerId}>
-                          <td>{row.name}</td>
-                          <td>{row.score}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {gameState.phase === "game_complete" ? (
-                  <div className="final-results">
-                    <h3>Game Complete</h3>
-                    <p className="final-results__winner">
-                      Winner{winners.length > 1 ? "s" : ""}:{" "}
-                      {winners.map((winner) => winner.name).join(", ")} (
-                      {winningScore} points)
-                    </p>
-                    {isHost ? (
-                      <button
-                        className="btn-success"
-                        onClick={() => {
-                          socketRef.current?.emit("game:restart");
-                        }}
-                        type="button"
-                      >
-                        Start New Game
-                      </button>
-                    ) : null}
-
-                    <h4>Final Standings</h4>
-                    <div className="table-scroll table-scroll--wide">
-                      <table className="final-results__table">
-                        <thead>
-                          <tr>
-                            <th>Rank</th>
-                            <th>Player</th>
-                            <th>Score</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sortedFinalScores.map((entry, index) => (
-                            <tr key={`final-standings-${entry.playerId}`}>
-                              <td>{index + 1}</td>
-                              <td>{entry.name}</td>
-                              <td>{entry.score}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <h4>Round-by-Round Breakdown</h4>
-                    <div className="table-scroll table-scroll--breakdown">
-                      <table className="final-results__table final-results__table--breakdown">
-                        <thead>
-                          <tr>
-                            <th style={{ minWidth: "6ch" }}>Round</th>
-                            <th style={{ minWidth: "6ch" }}>Cards</th>
-                            <th style={{ minWidth: "8ch" }}>Trump</th>
-                            {gameState.players.map((player) => (
-                              <th
-                                key={`final-breakdown-header-${player.playerId}`}
-                                style={{ minWidth: `${Math.max(player.name.length + 1, 8)}ch` }}
-                              >
-                                {player.name}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {gameState.completedRounds.map((round) => (
-                            <tr key={`final-breakdown-row-${round.roundIndex}`}>
-                              <td>{round.roundIndex + 1}</td>
-                              <td>{round.cardsPerPlayer}</td>
-                              <td>{getTrumpSuitLabel(round.trumpSuit)}</td>
-                              {gameState.players.map((player) => {
-                                const playerId = player.playerId;
-                                const bid = round.bids[playerId] ?? 0;
-                                const won = round.tricksWon[playerId] ?? 0;
-                                const points = round.scoreDelta[playerId] ?? 0;
-                                return (
-                                  <td
-                                    key={`final-breakdown-cell-${round.roundIndex}-${playerId}`}
-                                  >
-                                    {bid}/{won} (
-                                    {points > 0 ? `+${points}` : points})
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : null}
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
-              <aside className="round-stats">
-                <div className="round-info">
-                  <h3>Round Info</h3>
-                  <p className="round-stats__meta">
-                    No. of cards:{" "}
-                    <strong>{currentRound?.cardsPerPlayer ?? "-"}</strong>
+              {gameState.phase === "game_complete" ? (
+                <div className="final-results">
+                  <h3>Game Complete</h3>
+                  <p className="final-results__winner">
+                    Winner{winners.length > 1 ? "s" : ""}:{" "}
+                    {winners.map((winner) => winner.name).join(", ")} (
+                    {winningScore} points)
                   </p>
-                  <p className="round-stats__meta">
-                    Trump:{" "}
-                    <strong>
-                      {trumpSuit ? getTrumpSuitLabel(trumpSuit) : "-"}
-                    </strong>
-                  </p>
-                  <div className="round-info__trump">
-                    {trumpPreviewCardId ? (
-                      <div
-                        aria-label={`Trump preview ${trumpPreviewCardId}`}
-                        className="round-info__trump-card"
-                      >
-                        <PlayingCard cardId={trumpPreviewCardId} />
-                      </div>
-                    ) : (
-                      <p>No active round.</p>
-                    )}
+                  {isHost ? (
+                    <button
+                      className="btn-success"
+                      onClick={() => {
+                        socketRef.current?.emit("game:restart");
+                      }}
+                      type="button"
+                    >
+                      Start New Game
+                    </button>
+                  ) : null}
+
+                  <h4>Final Standings</h4>
+                  <div className="table-scroll table-scroll--wide">
+                    <table className="final-results__table">
+                      <thead>
+                        <tr>
+                          <th>Rank</th>
+                          <th>Player</th>
+                          <th>Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedFinalScores.map((entry, index) => (
+                          <tr key={`final-standings-${entry.playerId}`}>
+                            <td>{index + 1}</td>
+                            <td>{entry.name}</td>
+                            <td>{entry.score}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <h4>Round-by-Round Breakdown</h4>
+                  <div className="table-scroll table-scroll--breakdown">
+                    <table className="final-results__table final-results__table--breakdown">
+                      <thead>
+                        <tr>
+                          <th style={{ minWidth: "6ch" }}>Round</th>
+                          <th style={{ minWidth: "6ch" }}>Cards</th>
+                          <th style={{ minWidth: "8ch" }}>Trump</th>
+                          {gameState.players.map((player) => (
+                            <th
+                              key={`final-breakdown-header-${player.playerId}`}
+                              style={{ minWidth: `${Math.max(player.name.length + 1, 8)}ch` }}
+                            >
+                              {player.name}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gameState.completedRounds.map((round) => (
+                          <tr key={`final-breakdown-row-${round.roundIndex}`}>
+                            <td>{round.roundIndex + 1}</td>
+                            <td>{round.cardsPerPlayer}</td>
+                            <td>{getTrumpSuitLabel(round.trumpSuit)}</td>
+                            {gameState.players.map((player) => {
+                              const playerId = player.playerId;
+                              const bid = round.bids[playerId] ?? 0;
+                              const won = round.tricksWon[playerId] ?? 0;
+                              const points = round.scoreDelta[playerId] ?? 0;
+                              return (
+                                <td
+                                  key={`final-breakdown-cell-${round.roundIndex}-${playerId}`}
+                                >
+                                  {bid}/{won} (
+                                  {points > 0 ? `+${points}` : points})
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-
-                <h3>Round Tracker</h3>
-                <p className="round-stats__hint">
-                  Current round bids and tricks won.
-                </p>
-                {currentRound ? (
-                  <div className="round-stats__list">
-                    {roundTrackerPlayers.map((player) => {
-                      const bidRaw = currentRound.bids[player.playerId];
-                      const bid = typeof bidRaw === "number" ? bidRaw : null;
-                      const won = currentRound.tricksWon[player.playerId] ?? 0;
-                      const isSelf = session?.playerId === player.playerId;
-                      const isActiveTurn = activeTurnPlayerId === player.playerId;
-                      const handsNeeded = bid === null ? 0 : bid - won;
-                      const handsNeededText =
-                        bid === null
-                          ? "-"
-                          : handsNeeded > 0
-                            ? `Need ${handsNeeded}`
-                            : handsNeeded < 0
-                              ? `Over by ${Math.abs(handsNeeded)}`
-                              : "On target";
-                      const handsNeededClass =
-                        bid === null
-                          ? "round-stats__needed--unknown"
-                          : handsNeeded > 0
-                            ? "round-stats__needed--need"
-                            : handsNeeded < 0
-                              ? "round-stats__needed--over"
-                              : "round-stats__needed--on-target";
-                      const wonCount = currentRound.trickHistory.filter(
-                        (trick) => trick.winnerId === player.playerId,
-                      ).length;
-                      return (
-                        <div
-                          className={`round-stats__row${isSelf ? " round-stats__row--self" : ""}${
-                            isActiveTurn ? " round-stats__row--active-turn" : ""
-                          }`}
-                          key={player.playerId}
-                        >
-                          <div className="round-stats__name-row">
-                            <p className="round-stats__name">{player.name}</p>
-                            {isActiveTurn ? (
-                              <span className="pill round-stats__turn-pill">
-                                Playing now
-                              </span>
-                            ) : null}
-                          </div>
-                          <p className="round-stats__meta">Bid: {bid ?? "-"}</p>
-                          <p className="round-stats__meta">Won: {won}</p>
-                          <p className={`round-stats__needed ${handsNeededClass}`}>
-                            Hands needed: {handsNeededText}
-                          </p>
-                          <button
-                            aria-label={`View winning tricks for ${player.name}`}
-                            className="secondary btn-info-soft round-stats__button"
-                            disabled={wonCount === 0}
-                            onClick={() =>
-                              setSelectedWinnerPlayerId(player.playerId)
-                            }
-                            type="button"
-                          >
-                            Winning tricks ({wonCount})
-                          </button>
-                          <button
-                            aria-label={`View round summary for ${player.name}`}
-                            className="secondary btn-info-soft round-stats__button"
-                            disabled={gameState.completedRounds.length === 0}
-                            onClick={() =>
-                              setSelectedSummaryPlayerId(player.playerId)
-                            }
-                            type="button"
-                          >
-                            Round summary
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p>No active round.</p>
-                )}
-              </aside>
+              ) : null}
             </div>
           </section>
         </>
