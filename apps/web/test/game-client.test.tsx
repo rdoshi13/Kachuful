@@ -444,6 +444,117 @@ describe("GameClient", () => {
     expect(await screen.findByRole("button", { name: "Unlock room" })).toBeInTheDocument();
   });
 
+  it("shows remind button for current-turn player and emits turn:poke", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "bidding",
+      scores: { p1: 0, p2: 0 },
+      roundNumber: 0,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 0,
+        cardsPerPlayer: 1,
+        trumpSuit: "S",
+        dealerIndex: 0,
+        blind: true,
+        cardsDealt: false,
+        bids: { p1: null, p2: null },
+        bidTurnPlayerId: "p2",
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p2",
+        turnPlayerId: "p2",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 0, p2: 0 },
+        viewerHand: [],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remind Guest" }));
+    const pokeEvent = lastSocket?.emitted.find((entry) => entry.event === "turn:poke");
+    expect(pokeEvent?.payload).toEqual({ targetPlayerId: "p2" });
+  });
+
+  it("pulses turn banner when the player is poked", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p2",
+        sessionToken: "token-2",
+        name: "Guest",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+      ],
+      phase: "bidding",
+      scores: { p1: 0, p2: 0 },
+      roundNumber: 0,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 0,
+        cardsPerPlayer: 1,
+        trumpSuit: "S",
+        dealerIndex: 0,
+        blind: true,
+        cardsDealt: false,
+        bids: { p1: null, p2: null },
+        bidTurnPlayerId: "p2",
+        tricksWon: { p1: 0, p2: 0 },
+        leadPlayerId: "p2",
+        turnPlayerId: "p2",
+        currentTrick: [],
+        trickHistory: [],
+        handSizes: { p1: 0, p2: 0 },
+        viewerHand: [],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    const banner = await screen.findByRole("status");
+    expect(banner).not.toHaveClass("turn-banner--poked");
+
+    lastSocket?.trigger("turn:poked", {
+      targetPlayerId: "p2",
+      byPlayerId: "p1",
+      at: Date.now(),
+    });
+
+    expect(await screen.findByRole("status")).toHaveClass("turn-banner--poked");
+  });
+
   it("shows spectator label for players not in current active game", async () => {
     localStorage.setItem(
       "kachuful:session",
@@ -973,9 +1084,13 @@ describe("GameClient", () => {
       hostWinningButton,
     );
 
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    const winningTricksDialog = await screen.findByRole("dialog");
+    expect(winningTricksDialog).toBeInTheDocument();
     expect(await screen.findByText("Host winning tricks")).toBeInTheDocument();
     expect(await screen.findByText("Trick 1")).toBeInTheDocument();
+    expect(
+      winningTricksDialog.querySelectorAll(".trick-card--winner"),
+    ).toHaveLength(1);
   });
 
   it("shows last trick for 2 seconds across round transition and highlights winner", async () => {

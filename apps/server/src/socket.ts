@@ -1,7 +1,7 @@
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { Server as SocketIOServer, type Socket } from "socket.io";
 import { applyCommand, createGame, getPublicView } from "@kachuful/game-engine";
-import type { Command, RoomStatePayload, TransferSeatRequest } from "@kachuful/shared-types";
+import type { Command, GameState, RoomStatePayload, TransferSeatRequest } from "@kachuful/shared-types";
 import { log } from "./logger.js";
 import { createApp } from "./app.js";
 import { MatchHistoryStore } from "./history-store.js";
@@ -30,6 +30,22 @@ const emitGameError = (socket: Socket, message: string, code = "BAD_REQUEST"): v
 };
 
 const roomPayload = (store: RoomStore, roomCode: string): RoomStatePayload => store.getRoomStatePayload(roomCode);
+
+const getActiveTurnPlayerId = (gameState: GameState | null): string | null => {
+  if (!gameState || gameState.phase === "game_complete") {
+    return null;
+  }
+  if (!gameState.currentRound) {
+    return null;
+  }
+  if (gameState.phase === "bidding") {
+    return gameState.currentRound.bidTurnPlayerId ?? null;
+  }
+  if (gameState.phase === "trick_play") {
+    return gameState.currentRound.turnPlayerId ?? null;
+  }
+  return null;
+};
 
 const asTrickRevealPayload = (value: unknown): TrickRevealPayload | null => {
   if (!value || typeof value !== "object") {
@@ -275,6 +291,37 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
       } catch (error) {
         emitGameError(socket, (error as Error).message, "TRANSFER_FAILED");
       }
+    });
+
+    socket.on("turn:poke", (payload?: { targetPlayerId?: string }) => {
+      const identity = store.getIdentityBySocket(socket.id);
+      if (!identity) {
+        emitGameError(socket, "Join room first", "NOT_JOINED");
+        return;
+      }
+
+      const room = store.getRoom(identity.roomCode);
+      if (!room) {
+        emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+        return;
+      }
+      const activeTurnPlayerId = getActiveTurnPlayerId(room.gameState);
+      if (!activeTurnPlayerId) {
+        emitGameError(socket, "No active turn to remind", "NO_ACTIVE_TURN");
+        return;
+      }
+
+      const targetPlayerId = payload?.targetPlayerId;
+      if (typeof targetPlayerId !== "string" || targetPlayerId !== activeTurnPlayerId) {
+        emitGameError(socket, "Can only remind the current-turn player", "INVALID_TARGET");
+        return;
+      }
+
+      io.to(room.roomCode).emit("turn:poked", {
+        targetPlayerId,
+        byPlayerId: identity.playerId,
+        at: Date.now()
+      });
     });
 
     socket.on("game:start", () => {

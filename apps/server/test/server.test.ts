@@ -414,6 +414,58 @@ describe("server integration", () => {
     expect(gameError.code).toBe("OUT_OF_TURN");
   });
 
+  it("broadcasts turn poke to current-turn player and rejects invalid targets", async () => {
+    const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
+    const guest = (
+      await request(baseUrl)
+        .post(`/rooms/${host.roomCode}/join`)
+        .send({ name: "Guest" })
+        .expect(200)
+    ).body as RoomJoinResponse;
+
+    const hostSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const guestSocket = createClient(baseUrl, { transports: ["websocket"], forceNew: true, reconnection: false });
+    sockets.push(hostSocket, guestSocket);
+
+    await Promise.all([waitForConnect(hostSocket), waitForConnect(guestSocket)]);
+    hostSocket.emit("room:join", host);
+    guestSocket.emit("room:join", guest);
+
+    await Promise.all([
+      waitForEvent<RoomStatePayload>(hostSocket, "room:state"),
+      waitForEvent<RoomStatePayload>(guestSocket, "room:state")
+    ]);
+
+    hostSocket.emit("game:start");
+    const [hostGameView, guestGameView] = await Promise.all([
+      waitForEvent<PublicGameView>(hostSocket, "game:state"),
+      waitForEvent<PublicGameView>(guestSocket, "game:state")
+    ]);
+
+    const activeTurnPlayerId = hostGameView.currentRound?.bidTurnPlayerId;
+    expect(activeTurnPlayerId).toBeTruthy();
+    const reminderSocket = activeTurnPlayerId === host.playerId ? guestSocket : hostSocket;
+    const remindedSocket = activeTurnPlayerId === host.playerId ? hostSocket : guestSocket;
+
+    const pokeOnRemindedPromise = waitForEvent<{
+      targetPlayerId: string;
+      byPlayerId: string;
+      at: number;
+    }>(remindedSocket, "turn:poked");
+    reminderSocket.emit("turn:poke", { targetPlayerId: activeTurnPlayerId });
+    const pokeOnReminded = await pokeOnRemindedPromise;
+    expect(pokeOnReminded.targetPlayerId).toBe(activeTurnPlayerId);
+
+    const invalidTargetId = activeTurnPlayerId === host.playerId ? guest.playerId : host.playerId;
+    reminderSocket.emit("turn:poke", { targetPlayerId: invalidTargetId });
+    const invalidTargetError = await waitForEvent<{ code: string; message: string }>(
+      reminderSocket,
+      "game:error"
+    );
+    expect(invalidTargetError.code).toBe("INVALID_TARGET");
+    expect(guestGameView.phase).toBe("bidding");
+  });
+
   it("supports same-session reconnect without seat duplication", async () => {
     const host = (await request(baseUrl).post("/rooms").send({ name: "Host" }).expect(201)).body as RoomJoinResponse;
     const guest = (

@@ -81,10 +81,22 @@ interface TransferCodeState {
   expiresAt: number;
 }
 
+interface TurnPokedPayload {
+  targetPlayerId: string;
+  byPlayerId: string;
+  at: number;
+}
+
 interface HeroChip {
   id: string;
   label: string;
   tone: "accent" | "neutral";
+}
+
+interface PlayerScoreRow {
+  playerId: string;
+  name: string;
+  score: number;
 }
 
 const HERO_PRIMARY_CHIPS: HeroChip[] = [
@@ -98,6 +110,14 @@ const HERO_EXTRA_CHIPS: HeroChip[] = [
   { id: "remote", label: "Remote game nights", tone: "neutral" },
   { id: "cross-country", label: "Cross-country play", tone: "neutral" },
 ];
+
+const sortPlayerScoreRows = (rows: PlayerScoreRow[]): PlayerScoreRow[] =>
+  [...rows].sort(
+    (left, right) =>
+      right.score - left.score
+      || left.name.localeCompare(right.name)
+      || left.playerId.localeCompare(right.playerId),
+  );
 
 const toUserFacingErrorMessage = (message: string): string => {
   const normalized = message.toLocaleLowerCase();
@@ -178,6 +198,7 @@ export function GameClient() {
   const [transferCodeInput, setTransferCodeInput] = useState("");
   const [activeTransferCode, setActiveTransferCode] =
     useState<TransferCodeState | null>(null);
+  const [isTurnBannerPoked, setIsTurnBannerPoked] = useState(false);
 
   const socketRef = useRef<GameSocket | null>(null);
   const trickRevealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -187,6 +208,9 @@ export function GameClient() {
     null,
   );
   const copiedRoomCodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const turnBannerPokeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const previousGameStateRef = useRef<PublicGameView | null>(null);
@@ -221,6 +245,13 @@ export function GameClient() {
     }
     clearTimeout(copiedRoomCodeTimeoutRef.current);
     copiedRoomCodeTimeoutRef.current = null;
+  };
+  const clearTurnBannerPokeTimeout = () => {
+    if (!turnBannerPokeTimeoutRef.current) {
+      return;
+    }
+    clearTimeout(turnBannerPokeTimeoutRef.current);
+    turnBannerPokeTimeoutRef.current = null;
   };
 
   const handleCopyRoomCode = async () => {
@@ -325,6 +356,24 @@ export function GameClient() {
       setInfo("Transfer code generated. Enter it on your new device.");
       setError(null);
     });
+    socket.on("turn:poked", (payload: TurnPokedPayload) => {
+      if (
+        !payload
+        || typeof payload.targetPlayerId !== "string"
+        || typeof payload.byPlayerId !== "string"
+      ) {
+        return;
+      }
+      if (!session || payload.targetPlayerId !== session.playerId) {
+        return;
+      }
+      clearTurnBannerPokeTimeout();
+      setIsTurnBannerPoked(true);
+      turnBannerPokeTimeoutRef.current = setTimeout(() => {
+        setIsTurnBannerPoked(false);
+        turnBannerPokeTimeoutRef.current = null;
+      }, 1400);
+    });
     socket.on("player:reconnected", (payload: { playerId: string }) => {
       if (payload.playerId === session.playerId) {
         setInfo("Reconnected to your seat.");
@@ -335,6 +384,7 @@ export function GameClient() {
       clearTrickRevealTimeout();
       clearAutoSummaryTimeout();
       clearCopiedRoomCodeTimeout();
+      clearTurnBannerPokeTimeout();
       socket.disconnect();
       socketRef.current = null;
     };
@@ -451,6 +501,7 @@ export function GameClient() {
     clearTrickRevealTimeout();
     clearAutoSummaryTimeout();
     clearCopiedRoomCodeTimeout();
+    clearTurnBannerPokeTimeout();
   };
 
   const isHost = roomState?.hostPlayerId === session?.playerId;
@@ -508,6 +559,13 @@ export function GameClient() {
   const turnPlayerName = activeTurnPlayerId
     ? getPlayerName(activeTurnPlayerId)
     : null;
+  const showRemindButton = Boolean(
+    activeTurnPlayerId
+      && turnPlayerName
+      && !isMyTurn
+      && !isRoundTransitionRevealActive
+      && (gameState?.phase === "bidding" || gameState?.phase === "trick_play"),
+  );
   const turnPromptText =
     isMyTurn && trickPlay
       ? "Play a legal card."
@@ -529,23 +587,25 @@ export function GameClient() {
     if (!gameState) {
       return [];
     }
-    return gameState.players.map((player) => ({
-      playerId: player.playerId,
-      name: player.name,
-      score: gameState.scores[player.playerId] ?? 0,
-    }));
+    return sortPlayerScoreRows(
+      gameState.players.map((player) => ({
+        playerId: player.playerId,
+        name: player.name,
+        score: gameState.scores[player.playerId] ?? 0,
+      })),
+    );
   }, [gameState]);
   const sortedFinalScores = useMemo(() => {
     if (!gameState) {
       return [];
     }
-    return [...gameState.players]
-      .map((player) => ({
+    return sortPlayerScoreRows(
+      gameState.players.map((player) => ({
         playerId: player.playerId,
         name: player.name,
         score: gameState.scores[player.playerId] ?? 0,
-      }))
-      .sort((a, b) => b.score - a.score);
+      })),
+    );
   }, [gameState]);
   const winningScore = sortedFinalScores[0]?.score ?? 0;
   const winners = sortedFinalScores.filter(
@@ -620,6 +680,11 @@ export function GameClient() {
   useEffect(() => {
     setIsHandOrdered(false);
   }, [currentRound?.roundIndex]);
+
+  useEffect(() => {
+    setIsTurnBannerPoked(false);
+    clearTurnBannerPokeTimeout();
+  }, [activeTurnPlayerId]);
 
   useEffect(() => {
     document.title = isMyTurn
@@ -796,15 +861,6 @@ export function GameClient() {
           >
             Switch device
           </button>
-          <button
-            className="secondary btn-info"
-            onClick={() => {
-              socketRef.current?.emit("state:sync_request");
-            }}
-            type="button"
-          >
-            Sync state
-          </button>
           <button className="secondary btn-danger-soft" onClick={leaveSession} type="button">
             Leave
           </button>
@@ -888,13 +944,30 @@ export function GameClient() {
                   aria-live="polite"
                   className={`turn-banner ${
                     isMyTurn ? "turn-banner--self" : "turn-banner--waiting"
-                  }`}
+                  }${isTurnBannerPoked ? " turn-banner--poked" : ""}`}
                   role="status"
                 >
-                  <span className="turn-banner__label">
-                    {isMyTurn ? "Your turn" : "Current turn"}
-                  </span>
-                  <span className="turn-banner__text">{turnPromptText}</span>
+                  <div className="turn-banner__content">
+                    <div className="turn-banner__copy">
+                      <span className="turn-banner__label">
+                        {isMyTurn ? "Your turn" : "Current turn"}
+                      </span>
+                      <span className="turn-banner__text">{turnPromptText}</span>
+                    </div>
+                    {showRemindButton && activeTurnPlayerId && turnPlayerName ? (
+                      <button
+                        className="secondary btn-warning-soft turn-banner__remind"
+                        onClick={() => {
+                          socketRef.current?.emit("turn:poke", {
+                            targetPlayerId: activeTurnPlayerId,
+                          });
+                        }}
+                        type="button"
+                      >
+                        Remind {turnPlayerName}
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
 
@@ -1258,7 +1331,11 @@ export function GameClient() {
                     <div className="cards">
                       {trick.plays.map((play) => (
                         <span
-                          className="trick-card"
+                          className={`trick-card${
+                            play.playerId === trick.winnerId
+                              ? " trick-card--winner"
+                              : ""
+                          }`}
                           key={`won-${trick.trickNumber}-${play.playerId}`}
                         >
                           <span className="trick-card__player">
@@ -1567,16 +1644,16 @@ export function GameClient() {
                     Sort cards with trump suit first.
                   </li>
                   <li>
+                    <span className="howto-control-tag">Remind</span>
+                    Send a quick poke to the current-turn player.
+                  </li>
+                  <li>
                     <span className="howto-control-tag">Winning tricks</span>
                     View tricks won by a player this round.
                   </li>
                   <li>
                     <span className="howto-control-tag">Round summary</span>
                     View that player’s round-by-round results.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Sync state</span>
-                    Re-fetch latest room and game state.
                   </li>
                   <li>
                     <span className="howto-control-tag">Leave</span>

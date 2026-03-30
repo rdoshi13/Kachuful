@@ -131,6 +131,22 @@ const asTrickRevealPayload = (value: unknown): TrickRevealPayload | null => {
   };
 };
 
+const getActiveTurnPlayerId = (gameState: GameState | null): string | null => {
+  if (!gameState || gameState.phase === "game_complete") {
+    return null;
+  }
+  if (!gameState.currentRound) {
+    return null;
+  }
+  if (gameState.phase === "bidding") {
+    return gameState.currentRound.bidTurnPlayerId ?? null;
+  }
+  if (gameState.phase === "trick_play") {
+    return gameState.currentRound.turnPlayerId ?? null;
+  }
+  return null;
+};
+
 const parseJsonBody = async <T>(request: Request): Promise<T | null> => {
   try {
     return await request.json() as T;
@@ -470,6 +486,9 @@ export class GameHub extends DurableObject<Env> {
       case "state:sync_request":
         this.handleStateSyncRequest(socket);
         return;
+      case "turn:poke":
+        await this.handleTurnPoke(socket, message.payload);
+        return;
       default:
         this.emitGameError(socket, `Unsupported event: ${message.event}`, "BAD_EVENT");
     }
@@ -512,6 +531,39 @@ export class GameHub extends DurableObject<Env> {
     this.emit(socket, "session:transfer_code", {
       transferCode,
       expiresAt
+    });
+  }
+
+  private async handleTurnPoke(socket: WebSocket, payload: unknown): Promise<void> {
+    const identity = this.socketIdentity.get(socket);
+    if (!identity) {
+      this.emitGameError(socket, "Join room first", "NOT_JOINED");
+      return;
+    }
+
+    const room = this.rooms.get(identity.roomCode);
+    if (!room) {
+      this.emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+      return;
+    }
+
+    const activeTurnPlayerId = getActiveTurnPlayerId(room.gameState);
+    if (!activeTurnPlayerId) {
+      this.emitGameError(socket, "No active turn to remind", "NO_ACTIVE_TURN");
+      return;
+    }
+
+    const body = asObject(payload);
+    const targetPlayerId = body?.targetPlayerId;
+    if (typeof targetPlayerId !== "string" || targetPlayerId !== activeTurnPlayerId) {
+      this.emitGameError(socket, "Can only remind the current-turn player", "INVALID_TARGET");
+      return;
+    }
+
+    this.broadcastRoomEvent(room.roomCode, "turn:poked", {
+      targetPlayerId,
+      byPlayerId: identity.playerId,
+      at: Date.now()
     });
   }
 
