@@ -1114,12 +1114,14 @@ describe("GameClient", () => {
       name: "View winning tricks for Host",
     });
     const hostRow = hostWinningButton.closest(".round-stats__row");
+    expect(hostWinningButton).toBeEnabled();
     expect(hostRow).not.toHaveClass("round-stats__row--self");
     expect(hostRow).toHaveTextContent("Hands needed: On target");
     expect(await screen.findByText("Playing now")).toBeInTheDocument();
     const guestWinningButton = await screen.findByRole("button", {
       name: "View winning tricks for Guest",
     });
+    expect(guestWinningButton).toBeDisabled();
     const guestRow = guestWinningButton.closest(".round-stats__row");
     expect(guestRow).toHaveClass("round-stats__row--active-turn");
 

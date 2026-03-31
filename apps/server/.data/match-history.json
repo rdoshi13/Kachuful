@@ -746,6 +746,90 @@
           }
         ]
       }
+    ],
+    "DMTGC4": [
+      {
+        "matchId": "DMTGC4:DMTGC4:1:1774982504139",
+        "roomCode": "DMTGC4",
+        "startedAt": 1,
+        "completedAt": 1774982504139,
+        "roundsPlayed": 0,
+        "winnerPlayerIds": [
+          "cda7f6ae-84f1-4da2-83b8-da2dbdce741e",
+          "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1"
+        ],
+        "players": [
+          {
+            "playerId": "cda7f6ae-84f1-4da2-83b8-da2dbdce741e",
+            "name": "incognito",
+            "score": 0
+          },
+          {
+            "playerId": "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1",
+            "name": "Rishabh",
+            "score": 0
+          }
+        ],
+        "completedRounds": []
+      },
+      {
+        "matchId": "DMTGC4:DMTGC4:1:1774982449764",
+        "roomCode": "DMTGC4",
+        "startedAt": 1,
+        "completedAt": 1774982449764,
+        "roundsPlayed": 2,
+        "winnerPlayerIds": [
+          "cda7f6ae-84f1-4da2-83b8-da2dbdce741e"
+        ],
+        "players": [
+          {
+            "playerId": "cda7f6ae-84f1-4da2-83b8-da2dbdce741e",
+            "name": "incognito",
+            "score": 11
+          },
+          {
+            "playerId": "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1",
+            "name": "Rishabh",
+            "score": 10
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1": 1,
+              "cda7f6ae-84f1-4da2-83b8-da2dbdce741e": 1
+            },
+            "tricksWon": {
+              "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1": 0,
+              "cda7f6ae-84f1-4da2-83b8-da2dbdce741e": 1
+            },
+            "scoreDelta": {
+              "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1": 0,
+              "cda7f6ae-84f1-4da2-83b8-da2dbdce741e": 11
+            }
+          },
+          {
+            "roundIndex": 1,
+            "cardsPerPlayer": 2,
+            "trumpSuit": "D",
+            "bids": {
+              "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1": 0,
+              "cda7f6ae-84f1-4da2-83b8-da2dbdce741e": 1
+            },
+            "tricksWon": {
+              "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1": 0,
+              "cda7f6ae-84f1-4da2-83b8-da2dbdce741e": 2
+            },
+            "scoreDelta": {
+              "3b3dc24d-d119-4cd3-8ff3-93de2808b7e1": 10,
+              "cda7f6ae-84f1-4da2-83b8-da2dbdce741e": 0
+            }
+          }
+        ]
+      }
     ]
   }
 }

@@ -1106,6 +1106,10 @@ export function GameClient() {
                       const wonCount = currentRound.trickHistory.filter(
                         (trick) => trick.winnerId === player.playerId,
                       ).length;
+                      const canViewWinningTricks =
+                        session?.playerId === player.playerId;
+                      const winningTricksDisabled =
+                        wonCount === 0 || !canViewWinningTricks;
                       return (
                         <div
                           className={`round-stats__row${
@@ -1129,8 +1133,15 @@ export function GameClient() {
                           <button
                             aria-label={`View winning tricks for ${player.name}`}
                             className="secondary btn-info-soft round-stats__button"
-                            disabled={wonCount === 0}
+                            disabled={winningTricksDisabled}
                             onClick={() => setSelectedWinnerPlayerId(player.playerId)}
+                            title={
+                              canViewWinningTricks
+                                ? wonCount === 0
+                                  ? "No winning tricks yet."
+                                  : undefined
+                                : "You can only view your own winning tricks."
+                            }
                             type="button"
                           >
                             Winning tricks ({wonCount})
@@ -1761,7 +1772,7 @@ export function GameClient() {
                   </li>
                   <li>
                     <span className="howto-control-tag">Winning tricks</span>
-                    View tricks won by a player this round.
+                    View only your own won tricks for the current round.
                   </li>
                   <li>
                     <span className="howto-control-tag">Round summary</span>
