@@ -1634,6 +1634,7 @@ describe("GameClient", () => {
     });
 
     expect(await screen.findByText("Game Complete")).toBeInTheDocument();
+    expect(screen.queryByText("Scoreboard")).not.toBeInTheDocument();
     expect(screen.queryByText("Round 15 Summary")).not.toBeInTheDocument();
   });
 
@@ -1685,6 +1686,7 @@ describe("GameClient", () => {
     });
 
     expect(await screen.findByText("Game Complete")).toBeInTheDocument();
+    expect(screen.queryByText("Scoreboard")).not.toBeInTheDocument();
     expect(await screen.findByText("Winner: Host (33 points)")).toBeInTheDocument();
     expect(await screen.findByText("Final Standings")).toBeInTheDocument();
     expect(await screen.findByText("Round-by-Round Breakdown")).toBeInTheDocument();

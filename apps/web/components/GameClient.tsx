@@ -1305,26 +1305,6 @@ export function GameClient() {
 
           <section className="game-details-shell">
             <div className="game-score-panel">
-              <h3>Scoreboard</h3>
-              <div className="table-scroll table-scroll--wide">
-                <table className="score-table">
-                  <thead>
-                    <tr>
-                      <th>Player</th>
-                      <th>Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {scoreboard.map((row) => (
-                      <tr key={row.playerId}>
-                        <td>{row.name}</td>
-                        <td>{row.score}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
               {gameState.phase === "game_complete" ? (
                 <div className="final-results">
                   <h3>Game Complete</h3>
@@ -1411,7 +1391,29 @@ export function GameClient() {
                     </table>
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <>
+                  <h3>Scoreboard</h3>
+                  <div className="table-scroll table-scroll--wide">
+                    <table className="score-table">
+                      <thead>
+                        <tr>
+                          <th>Player</th>
+                          <th>Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scoreboard.map((row) => (
+                          <tr key={row.playerId}>
+                            <td>{row.name}</td>
+                            <td>{row.score}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           </section>
         </>

@@ -830,6 +830,100 @@
           }
         ]
       }
+    ],
+    "BL4C4V": [
+      {
+        "matchId": "BL4C4V:BL4C4V:1:1774984275003",
+        "roomCode": "BL4C4V",
+        "startedAt": 1,
+        "completedAt": 1774984275003,
+        "roundsPlayed": 4,
+        "winnerPlayerIds": [
+          "d0b15732-e569-4489-b276-9a52f13d20b9"
+        ],
+        "players": [
+          {
+            "playerId": "d0b15732-e569-4489-b276-9a52f13d20b9",
+            "name": "Rishabh",
+            "score": 24
+          },
+          {
+            "playerId": "12fd644b-a019-47b1-810b-6b1ab8cbbf23",
+            "name": "Incognito",
+            "score": 12
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 1,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 1
+            },
+            "tricksWon": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 0,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 1
+            },
+            "scoreDelta": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 0,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 11
+            }
+          },
+          {
+            "roundIndex": 1,
+            "cardsPerPlayer": 2,
+            "trumpSuit": "D",
+            "bids": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 0,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 1
+            },
+            "tricksWon": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 2,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 0
+            },
+            "scoreDelta": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 0,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 0
+            }
+          },
+          {
+            "roundIndex": 2,
+            "cardsPerPlayer": 3,
+            "trumpSuit": "C",
+            "bids": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 2,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 2
+            },
+            "tricksWon": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 2,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 1
+            },
+            "scoreDelta": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 12,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 0
+            }
+          },
+          {
+            "roundIndex": 3,
+            "cardsPerPlayer": 4,
+            "trumpSuit": "H",
+            "bids": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 2,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 3
+            },
+            "tricksWon": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 1,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 3
+            },
+            "scoreDelta": {
+              "12fd644b-a019-47b1-810b-6b1ab8cbbf23": 0,
+              "d0b15732-e569-4489-b276-9a52f13d20b9": 13
+            }
+          }
+        ]
+      }
     ]
   }
 }
