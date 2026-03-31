@@ -653,6 +653,27 @@ export function GameClient() {
         : turnPlayerName
           ? `${turnPlayerName} is up.`
           : null;
+  const turnOrderSnapshot = useMemo(() => {
+    if (!gameState || !activeTurnPlayerId) {
+      return null;
+    }
+    const playerIds = gameState.players.map((player) => player.playerId);
+    if (playerIds.length === 0) {
+      return null;
+    }
+    const currentIndex = playerIds.indexOf(activeTurnPlayerId);
+    if (currentIndex === -1) {
+      return null;
+    }
+    const previousIndex =
+      (currentIndex - 1 + playerIds.length) % playerIds.length;
+    const nextIndex = (currentIndex + 1) % playerIds.length;
+    return {
+      previousId: playerIds[previousIndex],
+      currentId: playerIds[currentIndex],
+      nextId: playerIds[nextIndex],
+    };
+  }, [gameState, activeTurnPlayerId]);
 
   const submitBid = (bid: number) => {
     socketRef.current?.emit("bid:submit", { bid });
@@ -1175,35 +1196,45 @@ export function GameClient() {
               <h2>Game</h2>
               <p>Round: {visibleRoundNumber}</p>
               {activeTurnPlayerId && turnPromptText ? (
-                <div
-                  aria-live="polite"
-                  className={`turn-banner ${
-                    isMyTurn ? "turn-banner--self" : "turn-banner--waiting"
-                  }${isTurnBannerPoked ? " turn-banner--poked" : ""}`}
-                  role="status"
-                >
-                  <div className="turn-banner__content">
-                    <div className="turn-banner__copy">
-                      <span className="turn-banner__label">
-                        {isMyTurn ? "Your turn" : "Current turn"}
-                      </span>
-                      <span className="turn-banner__text">{turnPromptText}</span>
+                <>
+                  <div
+                    aria-live="polite"
+                    className={`turn-banner ${
+                      isMyTurn ? "turn-banner--self" : "turn-banner--waiting"
+                    }${isTurnBannerPoked ? " turn-banner--poked" : ""}`}
+                    role="status"
+                  >
+                    <div className="turn-banner__content">
+                      <div className="turn-banner__copy">
+                        <span className="turn-banner__label">
+                          {isMyTurn ? "Your turn" : "Current turn"}
+                        </span>
+                        <span className="turn-banner__text">{turnPromptText}</span>
+                      </div>
+                      {showRemindButton && activeTurnPlayerId && turnPlayerName ? (
+                        <button
+                          className="secondary btn-warning-soft turn-banner__remind"
+                          onClick={() => {
+                            socketRef.current?.emit("turn:poke", {
+                              targetPlayerId: activeTurnPlayerId,
+                            });
+                          }}
+                          type="button"
+                        >
+                          Remind {turnPlayerName}
+                        </button>
+                      ) : null}
                     </div>
-                    {showRemindButton && activeTurnPlayerId && turnPlayerName ? (
-                      <button
-                        className="secondary btn-warning-soft turn-banner__remind"
-                        onClick={() => {
-                          socketRef.current?.emit("turn:poke", {
-                            targetPlayerId: activeTurnPlayerId,
-                          });
-                        }}
-                        type="button"
-                      >
-                        Remind {turnPlayerName}
-                      </button>
-                    ) : null}
                   </div>
-                </div>
+                  {turnOrderSnapshot ? (
+                    <div className="turn-order-strip">
+                      <span className="turn-order-chip turn-order-chip--next">
+                        Next Turn:{" "}
+                        <strong>{getPlayerName(turnOrderSnapshot.nextId)}</strong>
+                      </span>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
 
               {bidding && !isRoundTransitionRevealActive ? (

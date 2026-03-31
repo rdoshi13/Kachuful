@@ -586,7 +586,7 @@ describe("GameClient", () => {
       },
     });
 
-    const banner = await screen.findByRole("status");
+    const banner = (await screen.findByText("Place your bid.")).closest(".turn-banner");
     expect(banner).not.toHaveClass("turn-banner--poked");
 
     lastSocket?.trigger("turn:poked", {
@@ -595,7 +595,11 @@ describe("GameClient", () => {
       at: Date.now(),
     });
 
-    expect(await screen.findByRole("status")).toHaveClass("turn-banner--poked");
+    await waitFor(() => {
+      expect(screen.getByText("Place your bid.").closest(".turn-banner")).toHaveClass(
+        "turn-banner--poked",
+      );
+    });
   });
 
   it("shows spectator label for players not in current active game", async () => {
@@ -1237,6 +1241,59 @@ describe("GameClient", () => {
           ?.textContent,
       ).toBe("Third");
     });
+  });
+
+  it("shows next turn hint in turn order strip", async () => {
+    localStorage.setItem(
+      "kachuful:session",
+      JSON.stringify({
+        roomCode: "ROOM01",
+        playerId: "p1",
+        sessionToken: "token-1",
+        name: "Host",
+      }),
+    );
+
+    render(<GameClient />);
+
+    await waitFor(() => expect(lastSocket).not.toBeNull());
+    lastSocket?.trigger("connect");
+
+    lastSocket?.trigger("game:state", {
+      gameId: "ROOM01",
+      players: [
+        { playerId: "p1", name: "Host" },
+        { playerId: "p2", name: "Guest" },
+        { playerId: "p3", name: "Third" },
+      ],
+      phase: "trick_play",
+      scores: { p1: 0, p2: 0, p3: 0 },
+      roundNumber: 1,
+      completedRounds: [],
+      currentRound: {
+        roundIndex: 1,
+        cardsPerPlayer: 2,
+        trumpSuit: "H",
+        dealerIndex: 1,
+        blind: false,
+        cardsDealt: true,
+        bids: { p1: 1, p2: 0, p3: 1 },
+        bidTurnPlayerId: null,
+        tricksWon: { p1: 0, p2: 0, p3: 0 },
+        leadPlayerId: "p1",
+        turnPlayerId: "p2",
+        currentTrick: [{ playerId: "p1", cardId: "2C" }],
+        trickHistory: [],
+        handSizes: { p1: 1, p2: 2, p3: 2 },
+        viewerHand: ["3H", "4D"],
+        forbiddenDealerBid: null,
+        legalCardIds: [],
+      },
+    });
+
+    const turnOrderStrip = (await screen.findByText("Next Turn:")).closest(".turn-order-strip");
+    expect(turnOrderStrip).toBeTruthy();
+    expect(turnOrderStrip).toHaveTextContent(/Next Turn:\s*Third/);
   });
 
   it("shows last trick for 2 seconds across round transition and highlights winner", async () => {

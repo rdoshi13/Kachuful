@@ -765,6 +765,43 @@ td {
   white-space: nowrap;
 }
 
+.turn-order-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+
+.turn-order-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  border-radius: 999px;
+  border: 1px solid #b9cdf8;
+  background: #eef5ff;
+  color: #334155;
+  padding: 0.18rem 0.54rem;
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+
+.turn-order-chip strong {
+  color: #1f2a3b;
+}
+
+.turn-order-chip--current {
+  background: #dcfce7;
+  border-color: #8ecfba;
+  color: #166534;
+}
+
+.turn-order-chip--next {
+  background: #fff5dc;
+  border-color: #f0d39f;
+  color: #8f5600;
+}
+
 .turn-actions--active .turn-actions__button {
   box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.2);
 }
@@ -1199,6 +1236,14 @@ td {
   .turn-banner__content {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .turn-order-strip {
+    gap: 0.36rem;
+  }
+
+  .turn-order-chip {
+    font-size: 0.82rem;
   }
 
   .round-info-strip__header {

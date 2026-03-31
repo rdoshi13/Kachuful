@@ -924,6 +924,77 @@
           }
         ]
       }
+    ],
+    "JVJ73S": [
+      {
+        "matchId": "JVJ73S:JVJ73S:1:1774985988908",
+        "roomCode": "JVJ73S",
+        "startedAt": 1,
+        "completedAt": 1774985988908,
+        "roundsPlayed": 2,
+        "winnerPlayerIds": [
+          "ef2424b8-a98a-433b-99eb-6b5590b3dfb9"
+        ],
+        "players": [
+          {
+            "playerId": "ef2424b8-a98a-433b-99eb-6b5590b3dfb9",
+            "name": "Rishabh",
+            "score": 22
+          },
+          {
+            "playerId": "ba75fc75-978d-43e2-9740-33659b09ca25",
+            "name": "Incognito3",
+            "score": 20
+          },
+          {
+            "playerId": "da082a57-be0f-4314-8f46-293c6aca91aa",
+            "name": "Incognito",
+            "score": 0
+          }
+        ],
+        "completedRounds": [
+          {
+            "roundIndex": 0,
+            "cardsPerPlayer": 1,
+            "trumpSuit": "S",
+            "bids": {
+              "ef2424b8-a98a-433b-99eb-6b5590b3dfb9": 1,
+              "da082a57-be0f-4314-8f46-293c6aca91aa": 1,
+              "ba75fc75-978d-43e2-9740-33659b09ca25": 0
+            },
+            "tricksWon": {
+              "ef2424b8-a98a-433b-99eb-6b5590b3dfb9": 1,
+              "da082a57-be0f-4314-8f46-293c6aca91aa": 0,
+              "ba75fc75-978d-43e2-9740-33659b09ca25": 0
+            },
+            "scoreDelta": {
+              "ef2424b8-a98a-433b-99eb-6b5590b3dfb9": 11,
+              "da082a57-be0f-4314-8f46-293c6aca91aa": 0,
+              "ba75fc75-978d-43e2-9740-33659b09ca25": 10
+            }
+          },
+          {
+            "roundIndex": 1,
+            "cardsPerPlayer": 2,
+            "trumpSuit": "D",
+            "bids": {
+              "ef2424b8-a98a-433b-99eb-6b5590b3dfb9": 1,
+              "da082a57-be0f-4314-8f46-293c6aca91aa": 2,
+              "ba75fc75-978d-43e2-9740-33659b09ca25": 0
+            },
+            "tricksWon": {
+              "ef2424b8-a98a-433b-99eb-6b5590b3dfb9": 1,
+              "da082a57-be0f-4314-8f46-293c6aca91aa": 1,
+              "ba75fc75-978d-43e2-9740-33659b09ca25": 0
+            },
+            "scoreDelta": {
+              "ef2424b8-a98a-433b-99eb-6b5590b3dfb9": 11,
+              "da082a57-be0f-4314-8f46-293c6aca91aa": 0,
+              "ba75fc75-978d-43e2-9740-33659b09ca25": 10
+            }
+          }
+        ]
+      }
     ]
   }
 }
