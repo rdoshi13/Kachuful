@@ -1,7 +1,7 @@
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { Server as SocketIOServer, type Socket } from "socket.io";
 import { applyCommand, createGame, getPublicView } from "@kachuful/game-engine";
-import type { Command, RoomStatePayload } from "@kachuful/shared-types";
+import type { Command, GameState, RoomStatePayload, TransferSeatRequest } from "@kachuful/shared-types";
 import { log } from "./logger.js";
 import { createApp } from "./app.js";
 import { MatchHistoryStore } from "./history-store.js";
@@ -11,6 +11,10 @@ interface JoinEvent {
   roomCode: string;
   playerId: string;
   sessionToken: string;
+}
+interface TransferCodePayload {
+  transferCode: string;
+  expiresAt: number;
 }
 
 interface TrickRevealPayload {
@@ -26,6 +30,22 @@ const emitGameError = (socket: Socket, message: string, code = "BAD_REQUEST"): v
 };
 
 const roomPayload = (store: RoomStore, roomCode: string): RoomStatePayload => store.getRoomStatePayload(roomCode);
+
+const getActiveTurnPlayerId = (gameState: GameState | null): string | null => {
+  if (!gameState || gameState.phase === "game_complete") {
+    return null;
+  }
+  if (!gameState.currentRound) {
+    return null;
+  }
+  if (gameState.phase === "bidding") {
+    return gameState.currentRound.bidTurnPlayerId ?? null;
+  }
+  if (gameState.phase === "trick_play") {
+    return gameState.currentRound.turnPlayerId ?? null;
+  }
+  return null;
+};
 
 const asTrickRevealPayload = (value: unknown): TrickRevealPayload | null => {
   if (!value || typeof value !== "object") {
@@ -117,6 +137,38 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
       io.to(socketId).emit("game:state", view);
     }
   };
+
+  const disconnectPlayerSockets = (roomCode: string, playerId: string): void => {
+    const socketIds = store.getSocketIdsForPlayer(roomCode, playerId);
+    for (const socketId of socketIds) {
+      io.sockets.sockets.get(socketId)?.disconnect(true);
+    }
+  };
+
+  app.post("/rooms/:code/transfer", (req, res) => {
+    try {
+      const body = req.body as Partial<TransferSeatRequest>;
+      if (!body?.transferCode || typeof body.transferCode !== "string") {
+        return res.status(400).json({ error: "Transfer code is required" });
+      }
+      const { room, response } = store.consumeTransferCode(
+        req.params.code ?? "",
+        body.transferCode
+      );
+      disconnectPlayerSockets(room.roomCode, response.playerId);
+      return res.status(200).json(response);
+    } catch (error) {
+      const message = (error as Error).message;
+      const normalized = message.toLocaleLowerCase();
+      if (normalized.includes("not found")) {
+        return res.status(404).json({ error: message });
+      }
+      if (normalized.includes("offline") || normalized.includes("invalid") || normalized.includes("expired")) {
+        return res.status(409).json({ error: message });
+      }
+      return res.status(400).json({ error: message });
+    }
+  });
 
   const applyAndBroadcast = (roomCode: string, command: Command, socket: Socket): void => {
     const room = store.getRoom(roomCode);
@@ -221,6 +273,55 @@ export const createApiServer = (options: CreateApiServerOptions = {}): {
       } catch (error) {
         emitGameError(socket, (error as Error).message, "AUTH_FAILED");
       }
+    });
+
+    socket.on("session:transfer_request", () => {
+      const identity = store.getIdentityBySocket(socket.id);
+      if (!identity) {
+        emitGameError(socket, "Join room first", "NOT_JOINED");
+        return;
+      }
+
+      try {
+        const transfer: TransferCodePayload = store.createTransferCode(
+          identity.roomCode,
+          identity.playerId
+        );
+        socket.emit("session:transfer_code", transfer);
+      } catch (error) {
+        emitGameError(socket, (error as Error).message, "TRANSFER_FAILED");
+      }
+    });
+
+    socket.on("turn:poke", (payload?: { targetPlayerId?: string }) => {
+      const identity = store.getIdentityBySocket(socket.id);
+      if (!identity) {
+        emitGameError(socket, "Join room first", "NOT_JOINED");
+        return;
+      }
+
+      const room = store.getRoom(identity.roomCode);
+      if (!room) {
+        emitGameError(socket, "Room not found", "ROOM_NOT_FOUND");
+        return;
+      }
+      const activeTurnPlayerId = getActiveTurnPlayerId(room.gameState);
+      if (!activeTurnPlayerId) {
+        emitGameError(socket, "No active turn to remind", "NO_ACTIVE_TURN");
+        return;
+      }
+
+      const targetPlayerId = payload?.targetPlayerId;
+      if (typeof targetPlayerId !== "string" || targetPlayerId !== activeTurnPlayerId) {
+        emitGameError(socket, "Can only remind the current-turn player", "INVALID_TARGET");
+        return;
+      }
+
+      io.to(room.roomCode).emit("turn:poked", {
+        targetPlayerId,
+        byPlayerId: identity.playerId,
+        at: Date.now()
+      });
     });
 
     socket.on("game:start", () => {

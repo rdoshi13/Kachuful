@@ -1,6 +1,10 @@
 import cors from "cors";
 import express from "express";
-import type { CreateRoomRequest, JoinRoomRequest, RoomHistoryResponse } from "@kachuful/shared-types";
+import type {
+  CreateRoomRequest,
+  JoinRoomRequest,
+  RoomHistoryResponse
+} from "@kachuful/shared-types";
 import { MatchHistoryStore } from "./history-store.js";
 import { RoomStore } from "./store.js";
 

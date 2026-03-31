@@ -1,4 +1,4 @@
-import type { RoomJoinResponse } from "@kachuful/shared-types";
+import type { RoomJoinResponse, RoomTransferResponse } from "@kachuful/shared-types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
 
@@ -20,3 +20,6 @@ export const createRoom = (name: string): Promise<RoomJoinResponse> => postJson(
 
 export const joinRoom = (roomCode: string, name: string): Promise<RoomJoinResponse> =>
   postJson(`/rooms/${roomCode.toUpperCase()}/join`, { name });
+
+export const transferRoomSeat = (roomCode: string, transferCode: string): Promise<RoomTransferResponse> =>
+  postJson(`/rooms/${roomCode.toUpperCase()}/transfer`, { transferCode });
