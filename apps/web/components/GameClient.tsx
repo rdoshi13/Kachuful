@@ -143,6 +143,34 @@ interface HeroChip {
   tone: "accent" | "neutral";
 }
 
+type HowToPlayLanguage = "en" | "gu";
+
+interface HowToPlayControlItem {
+  tag: string;
+  description: string;
+  tagTone?: "success" | "danger";
+}
+
+interface HowToPlayCopy {
+  title: string;
+  closeLabel: string;
+  languageLabel: string;
+  intro: string;
+  quickStartSteps: string[];
+  roundFlowTitle: string;
+  roundFlowItems: string[];
+  winningAndScoringTitle: string;
+  winningAndScoringItems: string[];
+  scoreTableHeaders: [string, string, string, string];
+  scoreTableRows: Array<[string, string, string, string]>;
+  trickExampleTitle: string;
+  trickLeadLabel: string;
+  trickFollowLabel: string;
+  trickTrumpWinLabel: string;
+  controlsTitle: string;
+  controlsItems: HowToPlayControlItem[];
+}
+
 interface PlayerScoreRow {
   playerId: string;
   name: string;
@@ -160,6 +188,145 @@ const HERO_EXTRA_CHIPS: HeroChip[] = [
   { id: "remote", label: "Remote game nights", tone: "neutral" },
   { id: "cross-country", label: "Cross-country play", tone: "neutral" },
 ];
+
+const HOW_TO_PLAY_COPY: Record<HowToPlayLanguage, HowToPlayCopy> = {
+  en: {
+    title: "How to Play Kachuful",
+    closeLabel: "Close",
+    languageLabel: "How to play language",
+    intro: "Learn the flow quickly, then use the controls confidently during live rounds.",
+    quickStartSteps: [
+      "Create or join a private room with a code.",
+      "Bid exactly what you expect to win.",
+      "Follow suit, win tricks, and hit your bid for points.",
+    ],
+    roundFlowTitle: "Round Flow",
+    roundFlowItems: [
+      "2 to 6 players can join a room.",
+      "Round pattern is 1,2,3,4,5,6,7,8,7,6,5,4,3,2,1 cards.",
+      "Trump rotates every round: Spades, Diamonds, Clubs, Hearts.",
+      "Round 1 is blind: bids lock first, then cards are revealed.",
+      "Dealer cannot make the final bid that makes total bids equal total tricks.",
+      "You must follow lead suit whenever possible.",
+      "Completed tricks stay visible for 2 seconds with winner highlight.",
+    ],
+    winningAndScoringTitle: "Winning & Scoring",
+    winningAndScoringItems: [
+      "Highest trump wins the trick; if no trump is played, highest lead suit wins.",
+      "Exact bid scores 10 + tricks won; miss scores 0 for that round.",
+    ],
+    scoreTableHeaders: ["Bid", "Won", "Result", "Round Points"],
+    scoreTableRows: [
+      ["2", "2", "✓ Hit", "+12"],
+      ["2", "1", "✗ Miss", "0"],
+    ],
+    trickExampleTitle: "Trick example (Trump: Spades)",
+    trickLeadLabel: "Lead",
+    trickFollowLabel: "Follow",
+    trickTrumpWinLabel: "Trump wins",
+    controlsTitle: "Buttons & Controls",
+    controlsItems: [
+      { tag: "Create room", description: "Start a new private room code." },
+      { tag: "Join room", description: "Join an existing room by code." },
+      { tag: "Copy code", description: "Copy room code to clipboard." },
+      {
+        tag: "Lock / Unlock room",
+        description: "Host controls whether new names can join.",
+      },
+      {
+        tag: "Start game",
+        description: "Host only; requires at least 2 online players.",
+        tagTone: "success",
+      },
+      {
+        tag: "End game",
+        description: "Host can finish the active match early.",
+        tagTone: "danger",
+      },
+      { tag: "Bid X", description: "Submit your bid for the round." },
+      { tag: "Order hand", description: "Sort cards with trump suit first." },
+      { tag: "Remind", description: "Send a quick poke to the current-turn player." },
+      {
+        tag: "Winning tricks",
+        description: "View only your own won tricks for the current round.",
+      },
+      { tag: "Round summary", description: "View that player's round-by-round results." },
+      { tag: "Leave", description: "Exit room on this device." },
+      {
+        tag: "Spectator",
+        description: "Mid-match joiners can watch; only online players are included on restart.",
+      },
+    ],
+  },
+  gu: {
+    title: "કચ્છૂફુલ કેવી રીતે રમવું",
+    closeLabel: "બંધ કરો",
+    languageLabel: "ભાષા પસંદ કરો",
+    intro: "ઝડપથી ફ્લો સમજો અને લાઇવ રાઉન્ડ દરમિયાન બટનો વિશ્વાસથી ઉપયોગ કરો.",
+    quickStartSteps: [
+      "રૂમ કોડથી ખાનગી રૂમ બનાવો અથવા જોડાઓ.",
+      "તમે જેટલા હાથ જીતશો એટલી જ બોલી કહો.",
+      "લીડ સુટ ફોલો કરો, હાથ જીવો અને તમારી બોલી સાચી બેસાડો.",
+    ],
+    roundFlowTitle: "રાઉન્ડ ફ્લો",
+    roundFlowItems: [
+      "એક રૂમમાં 2 થી 6 ખેલાડીઓ જોડાઈ શકે છે.",
+      "રાઉન્ડ પેટર્ન: 1,2,3,4,5,6,7,8,7,6,5,4,3,2,1 કાર્ડ.",
+      "સર દરેક રાઉન્ડે ફરે છે: કાળી, ચરકટ, ફુલ્લી, લાલ.",
+      "રાઉન્ડ 1 blind છે: પહેલા બોલીઓ લોક થાય, પછી કાર્ડ દેખાય.",
+      "ડિલર છેલ્લી એવી બોલી કહી શકતો નથી કે કુલ બોલી = કુલ હાથ બને.",
+      "શક્ય હોય ત્યારે લીડ સુટ ફોલો કરવું ફરજિયાત છે.",
+      "પૂરો થયેલો હાથ 2 સેકન્ડ દેખાય છે અને વિજેતા કાર્ડ હાઇલાઇટ થાય છે.",
+    ],
+    winningAndScoringTitle: "જીત અને સ્કોરિંગ",
+    winningAndScoringItems: [
+      "હાથમાં સૌથી ઊંચો સર જીતે; સર ન હોય તો લીડ સુટનો સૌથી ઊંચો કાર્ડ જીતે.",
+      "બોલી બરાબર હિટ થાય તો 10 + જીતેલા હાથના પોઇન્ટ્સ; મિસ થાય તો 0.",
+    ],
+    scoreTableHeaders: ["બોલી", "જીતેલી", "પરિણામ", "રાઉન્ડ પોઇન્ટ્સ"],
+    scoreTableRows: [
+      ["2", "2", "✓ હિટ", "+12"],
+      ["2", "1", "✗ મિસ", "0"],
+    ],
+    trickExampleTitle: "હાથ ઉદાહરણ (સર: કાળી)",
+    trickLeadLabel: "લીડ",
+    trickFollowLabel: "ફોલો",
+    trickTrumpWinLabel: "સર જીતે",
+    controlsTitle: "બટનો અને નિયંત્રણો",
+    controlsItems: [
+      { tag: "Create room", description: "નવો ખાનગી રૂમ કોડ બનાવો." },
+      { tag: "Join room", description: "રૂમ કોડથી હાલના રૂમમાં જોડાઓ." },
+      { tag: "Copy code", description: "રૂમ કોડ ક્લિપબોર્ડમાં કૉપી કરો." },
+      {
+        tag: "Lock / Unlock room",
+        description: "હોસ્ટ નક્કી કરે કે નવા નામો જોડાઈ શકે કે નહીં.",
+      },
+      {
+        tag: "Start game",
+        description: "ફક્ત હોસ્ટ; ઓછામાં ઓછા 2 ઑનલાઇન ખેલાડીઓ જરૂરી.",
+        tagTone: "success",
+      },
+      {
+        tag: "End game",
+        description: "હોસ્ટ ચાલુ મેચ વહેલી પૂરી કરી શકે છે.",
+        tagTone: "danger",
+      },
+      { tag: "બોલી X", description: "આ રાઉન્ડ માટે તમારી બોલી મોકલો." },
+      { tag: "Order hand", description: "સર સુટ પહેલા આવે એમ કાર્ડ ગોઠવો." },
+      { tag: "Remind", description: "જેનો ટર્ન છે તેને યાદ અપાવો (poke)." },
+      {
+        tag: "Winning tricks",
+        description: "માત્ર તમારા જીતેલા હાથ જ જોઈ શકશો.",
+      },
+      { tag: "Round summary", description: "તે ખેલાડીનો round-by-round સારાંશ જુઓ." },
+      { tag: "Leave", description: "આ ડિવાઇસ પરથી રૂમ છોડો." },
+      {
+        tag: "Spectator",
+        description: "મેચ દરમિયાન જોડાયેલા spectator જોઈ શકે; restart પર ફક્ત ઑનલાઇન ખેલાડીઓ જોડાય.",
+      },
+    ],
+  },
+};
 
 const sortPlayerScoreRows = (rows: PlayerScoreRow[]): PlayerScoreRow[] =>
   [...rows].sort(
@@ -240,6 +407,8 @@ export function GameClient() {
   const [selectedCompletedRoundIndex, setSelectedCompletedRoundIndex] =
     useState<number | null>(null);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [howToPlayLanguage, setHowToPlayLanguage] =
+    useState<HowToPlayLanguage>("en");
   const [showAllHeroChips, setShowAllHeroChips] = useState(false);
   const [isHandOrdered, setIsHandOrdered] = useState(false);
   const [isRoomInfoExpanded, setIsRoomInfoExpanded] = useState(true);
@@ -269,6 +438,7 @@ export function GameClient() {
     null,
   );
   const previousGameStateRef = useRef<PublicGameView | null>(null);
+  const howToPlayCopy = HOW_TO_PLAY_COPY[howToPlayLanguage];
 
   const clearTrickRevealTimeout = () => {
     if (!trickRevealTimeoutRef.current) {
@@ -1669,95 +1839,109 @@ export function GameClient() {
             role="dialog"
           >
             <div className="modal-card__header">
-              <h3>How to Play Kachuful</h3>
-              <button
-                className="secondary"
-                onClick={() => setShowHowToPlay(false)}
-                type="button"
-              >
-                Close
-              </button>
+              <h3>{howToPlayCopy.title}</h3>
+              <div className="howto-header-actions">
+                <div
+                  aria-label={howToPlayCopy.languageLabel}
+                  className="howto-language-toggle"
+                  role="group"
+                >
+                  <button
+                    aria-pressed={howToPlayLanguage === "en"}
+                    className={`howto-language-button ${
+                      howToPlayLanguage === "en" ? "howto-language-button--active" : ""
+                    }`}
+                    onClick={() => setHowToPlayLanguage("en")}
+                    type="button"
+                  >
+                    English
+                  </button>
+                  <button
+                    aria-pressed={howToPlayLanguage === "gu"}
+                    className={`howto-language-button ${
+                      howToPlayLanguage === "gu" ? "howto-language-button--active" : ""
+                    }`}
+                    onClick={() => setHowToPlayLanguage("gu")}
+                    type="button"
+                  >
+                    ગુજરાતી
+                  </button>
+                </div>
+                <button
+                  className="secondary"
+                  onClick={() => setShowHowToPlay(false)}
+                  type="button"
+                >
+                  {howToPlayCopy.closeLabel}
+                </button>
+              </div>
             </div>
-            <p className="howto-intro">
-              Learn the flow quickly, then use the controls confidently during live rounds.
-            </p>
+            <p className="howto-intro">{howToPlayCopy.intro}</p>
 
             <div className="howto-quickstart">
-              <div className="howto-step">
-                <span className="howto-step__index">1</span>
-                <p>Create or join a private room with a code.</p>
-              </div>
-              <div className="howto-step">
-                <span className="howto-step__index">2</span>
-                <p>Bid exactly what you expect to win.</p>
-              </div>
-              <div className="howto-step">
-                <span className="howto-step__index">3</span>
-                <p>Follow suit, win tricks, and hit your bid for points.</p>
-              </div>
+              {howToPlayCopy.quickStartSteps.map((step, index) => (
+                <div className="howto-step" key={`howto-step-${step}`}>
+                  <span className="howto-step__index">{index + 1}</span>
+                  <p>{step}</p>
+                </div>
+              ))}
             </div>
 
             <div className="howto-accordions">
               <details className="howto-accordion" open>
-                <summary>Round Flow</summary>
+                <summary>{howToPlayCopy.roundFlowTitle}</summary>
                 <ul className="howto-list">
-                  <li>2 to 6 players can join a room.</li>
-                  <li>Round pattern is 1,2,3,4,5,6,7,8,7,6,5,4,3,2,1 cards.</li>
-                  <li>Trump rotates every round: Spades, Diamonds, Clubs, Hearts.</li>
-                  <li>Round 1 is blind: bids lock first, then cards are revealed.</li>
-                  <li>Dealer cannot make the final bid that makes total bids equal total tricks.</li>
-                  <li>You must follow lead suit whenever possible.</li>
-                  <li>Completed tricks stay visible for 2 seconds with winner highlight.</li>
+                  {howToPlayCopy.roundFlowItems.map((item) => (
+                    <li key={`howto-flow-${item}`}>{item}</li>
+                  ))}
                 </ul>
               </details>
 
               <details className="howto-accordion" open>
-                <summary>Winning & Scoring</summary>
+                <summary>{howToPlayCopy.winningAndScoringTitle}</summary>
                 <ul className="howto-list">
-                  <li>Highest trump wins the trick; if no trump is played, highest lead suit wins.</li>
-                  <li>Exact bid scores 10 + tricks won; miss scores 0 for that round.</li>
+                  {howToPlayCopy.winningAndScoringItems.map((item) => (
+                    <li key={`howto-score-${item}`}>{item}</li>
+                  ))}
                 </ul>
 
                 <div className="table-scroll table-scroll--wide">
                   <table className="howto-score-table">
                     <thead>
                       <tr>
-                        <th>Bid</th>
-                        <th>Won</th>
-                        <th>Result</th>
-                        <th>Round Points</th>
+                        {howToPlayCopy.scoreTableHeaders.map((header) => (
+                          <th key={`howto-score-header-${header}`}>{header}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>2</td>
-                        <td>2</td>
-                        <td>✓ Hit</td>
-                        <td>+12</td>
-                      </tr>
-                      <tr>
-                        <td>2</td>
-                        <td>1</td>
-                        <td>✗ Miss</td>
-                        <td>0</td>
-                      </tr>
+                      {howToPlayCopy.scoreTableRows.map((row, index) => (
+                        <tr key={`howto-score-row-${index}`}>
+                          <td>{row[0]}</td>
+                          <td>{row[1]}</td>
+                          <td>{row[2]}</td>
+                          <td>{row[3]}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
 
                 <div className="howto-trick">
-                  <p className="howto-trick__title">Trick example (Trump: Spades)</p>
+                  <p className="howto-trick__title">{howToPlayCopy.trickExampleTitle}</p>
                   <div className="cards">
                     <span className="trick-card">
-                      <span className="trick-card__player">Lead</span>
+                      <span className="trick-card__player">{howToPlayCopy.trickLeadLabel}</span>
                       <PlayingCard cardId="9H" />
                     </span>
                     <span className="trick-card">
-                      <span className="trick-card__player">Follow</span>
+                      <span className="trick-card__player">{howToPlayCopy.trickFollowLabel}</span>
                       <PlayingCard cardId="QH" />
                     </span>
                     <span className="trick-card trick-card--winner">
-                      <span className="trick-card__player">Trump wins</span>
+                      <span className="trick-card__player">
+                        {howToPlayCopy.trickTrumpWinLabel}
+                      </span>
                       <PlayingCard cardId="2S" />
                     </span>
                   </div>
@@ -1765,60 +1949,20 @@ export function GameClient() {
               </details>
 
               <details className="howto-accordion" open>
-                <summary>Buttons & Controls</summary>
+                <summary>{howToPlayCopy.controlsTitle}</summary>
                 <ul className="howto-list">
-                  <li>
-                    <span className="howto-control-tag">Create room</span>
-                    Start a new private room code.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Join room</span>
-                    Join an existing room by code.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Copy code</span>
-                    Copy room code to clipboard.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Lock / Unlock room</span>
-                    Host controls whether new names can join.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag howto-control-tag--success">Start game</span>
-                    Host only; requires at least 2 online players.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag howto-control-tag--danger">End game</span>
-                    Host can finish the active match early.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Bid X</span>
-                    Submit your bid for the round.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Order hand</span>
-                    Sort cards with trump suit first.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Remind</span>
-                    Send a quick poke to the current-turn player.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Winning tricks</span>
-                    View only your own won tricks for the current round.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Round summary</span>
-                    View that player’s round-by-round results.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Leave</span>
-                    Exit room on this device.
-                  </li>
-                  <li>
-                    <span className="howto-control-tag">Spectator</span>
-                    Mid-match joiners can watch; only online players are included on restart.
-                  </li>
+                  {howToPlayCopy.controlsItems.map((item) => (
+                    <li key={`howto-control-${item.tag}`}>
+                      <span
+                        className={`howto-control-tag ${
+                          item.tagTone ? `howto-control-tag--${item.tagTone}` : ""
+                        }`}
+                      >
+                        {item.tag}
+                      </span>
+                      {item.description}
+                    </li>
+                  ))}
                 </ul>
               </details>
             </div>

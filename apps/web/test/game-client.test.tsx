@@ -71,6 +71,22 @@ describe("GameClient", () => {
     });
   });
 
+  it("switches how to play modal language to Gujarati", async () => {
+    render(<GameClient />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "How to Play" }));
+    fireEvent.click(await screen.findByRole("button", { name: "ગુજરાતી" }));
+
+    expect(await screen.findByText("કચ્છૂફુલ કેવી રીતે રમવું")).toBeInTheDocument();
+    expect(await screen.findByText("રાઉન્ડ ફ્લો")).toBeInTheDocument();
+    expect(await screen.findByText("સર દરેક રાઉન્ડે ફરે છે: કાળી, ચરકટ, ફુલ્લી, લાલ.")).toBeInTheDocument();
+    expect(await screen.findByText("હાથ ઉદાહરણ (સર: કાળી)")).toBeInTheDocument();
+    expect(await screen.findByText("ફક્ત હોસ્ટ; ઓછામાં ઓછા 2 ઑનલાઇન ખેલાડીઓ જરૂરી.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    expect(await screen.findByText("How to Play Kachuful")).toBeInTheDocument();
+  });
+
   it("creates room and joins socket with saved session", async () => {
     vi.stubGlobal(
       "fetch",

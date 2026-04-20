@@ -935,6 +935,39 @@ td {
   margin-bottom: 0.6rem;
 }
 
+.howto-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.howto-language-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.16rem;
+  border: 1px solid #bfd5ff;
+  border-radius: 999px;
+  background: #edf5ff;
+}
+
+.howto-language-button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #1d4d98;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.howto-language-button--active {
+  background: #ffffff;
+  border-color: #9dbdff;
+  color: #1e3a8a;
+}
+
 .howto-intro {
   margin: 0 0 0.7rem;
   color: #475569;
@@ -1208,6 +1241,21 @@ td {
 
   .lobby-grid {
     grid-template-columns: 1fr;
+  }
+
+  .modal-card__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .howto-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .howto-language-button {
+    font-size: 0.76rem;
+    padding: 0.18rem 0.5rem;
   }
 
   .howto-quickstart {
