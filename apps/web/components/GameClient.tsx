@@ -835,13 +835,13 @@ export function GameClient() {
     if (currentIndex === -1) {
       return null;
     }
-    const previousIndex =
-      (currentIndex - 1 + playerIds.length) % playerIds.length;
     const nextIndex = (currentIndex + 1) % playerIds.length;
+    const nextId = playerIds[nextIndex];
+    if (typeof nextId !== "string") {
+      return null;
+    }
     return {
-      previousId: playerIds[previousIndex],
-      currentId: playerIds[currentIndex],
-      nextId: playerIds[nextIndex],
+      nextId,
     };
   }, [gameState, activeTurnPlayerId]);
 
