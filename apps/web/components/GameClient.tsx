@@ -97,7 +97,8 @@ const getLiveTrickLeaderPlayerId = (
   let winner = trick[0]!;
   let winnerSuit = firstCardSuit;
   let winnerRank = getCardRankValueFromCardId(winner.cardId);
-  let winnerStrength = winnerSuit === trumpSuit ? 2 : winnerSuit === leadSuit ? 1 : 0;
+  let winnerStrength =
+    winnerSuit === trumpSuit ? 2 : winnerSuit === leadSuit ? 1 : 0;
 
   for (let index = 1; index < trick.length; index += 1) {
     const current = trick[index]!;
@@ -106,10 +107,11 @@ const getLiveTrickLeaderPlayerId = (
       continue;
     }
     const currentRank = getCardRankValueFromCardId(current.cardId);
-    const currentStrength = currentSuit === trumpSuit ? 2 : currentSuit === leadSuit ? 1 : 0;
+    const currentStrength =
+      currentSuit === trumpSuit ? 2 : currentSuit === leadSuit ? 1 : 0;
     if (
-      currentStrength > winnerStrength
-      || (currentStrength === winnerStrength && currentRank > winnerRank)
+      currentStrength > winnerStrength ||
+      (currentStrength === winnerStrength && currentRank > winnerRank)
     ) {
       winner = current;
       winnerSuit = currentSuit;
@@ -194,7 +196,8 @@ const HOW_TO_PLAY_COPY: Record<HowToPlayLanguage, HowToPlayCopy> = {
     title: "How to Play Kachuful",
     closeLabel: "Close",
     languageLabel: "How to play language",
-    intro: "Learn the flow quickly, then use the controls confidently during live rounds.",
+    intro:
+      "Learn the flow quickly, then use the controls confidently during live rounds.",
     quickStartSteps: [
       "Create or join a private room with a code.",
       "Bid exactly what you expect to win.",
@@ -245,51 +248,58 @@ const HOW_TO_PLAY_COPY: Record<HowToPlayLanguage, HowToPlayCopy> = {
       },
       { tag: "Bid X", description: "Submit your bid for the round." },
       { tag: "Order hand", description: "Sort cards with trump suit first." },
-      { tag: "Remind", description: "Send a quick poke to the current-turn player." },
+      {
+        tag: "Remind",
+        description: "Send a quick poke to the current-turn player.",
+      },
       {
         tag: "Winning tricks",
         description: "View only your own won tricks for the current round.",
       },
-      { tag: "Round summary", description: "View that player's round-by-round results." },
+      {
+        tag: "Round summary",
+        description: "View that player's round-by-round results.",
+      },
       { tag: "Leave", description: "Exit room on this device." },
       {
         tag: "Spectator",
-        description: "Mid-match joiners can watch; only online players are included on restart.",
+        description:
+          "Mid-match joiners can watch; only online players are included on restart.",
       },
     ],
   },
   gu: {
-    title: "કચ્છૂફુલ કેવી રીતે રમવું",
+    title: "કાચુફુલ કેવી રીતે રમવું",
     closeLabel: "બંધ કરો",
     languageLabel: "ભાષા પસંદ કરો",
     intro: "ઝડપથી ફ્લો સમજો અને લાઇવ રાઉન્ડ દરમિયાન બટનો વિશ્વાસથી ઉપયોગ કરો.",
     quickStartSteps: [
       "રૂમ કોડથી ખાનગી રૂમ બનાવો અથવા જોડાઓ.",
       "તમે જેટલા હાથ જીતશો એટલી જ બોલી કહો.",
-      "લીડ સુટ ફોલો કરો, હાથ જીવો અને તમારી બોલી સાચી બેસાડો.",
+      "ઉત્તર સુટ ફોલો કરો, હાથ જીતો અને તમારી બોલી સાચી બેસાડો.",
     ],
-    roundFlowTitle: "રાઉન્ડ ફ્લો",
+    roundFlowTitle: "રમત ના નિયમો",
     roundFlowItems: [
       "એક રૂમમાં 2 થી 6 ખેલાડીઓ જોડાઈ શકે છે.",
-      "રાઉન્ડ પેટર્ન: 1,2,3,4,5,6,7,8,7,6,5,4,3,2,1 કાર્ડ.",
+      "રાઉન્ડ પેટર્ન: 1,2,3,4,5,6,7,8,7,6,5,4,3,2,1 પત્તા.",
       "સર દરેક રાઉન્ડે ફરે છે: કાળી, ચરકટ, ફુલ્લી, લાલ.",
-      "રાઉન્ડ 1 blind છે: પહેલા બોલીઓ લોક થાય, પછી કાર્ડ દેખાય.",
+      "પહેલો રાઉન્ડ બ્લાઇન્ડ છે: પહેલા બોલીઓ લોક થાય, પછી પત્તા દેખાય.",
       "ડિલર છેલ્લી એવી બોલી કહી શકતો નથી કે કુલ બોલી = કુલ હાથ બને.",
-      "શક્ય હોય ત્યારે લીડ સુટ ફોલો કરવું ફરજિયાત છે.",
-      "પૂરો થયેલો હાથ 2 સેકન્ડ દેખાય છે અને વિજેતા કાર્ડ હાઇલાઇટ થાય છે.",
+      "શક્ય હોય ત્યારે ઉત્તર સુટ ફોલો કરવું ફરજિયાત છે.",
+      "પૂરો થયેલો હાથ 2 સેકન્ડ દેખાય છે અને વિજેતા પત્તા હાઇલાઇટ થાય છે.",
     ],
     winningAndScoringTitle: "જીત અને સ્કોરિંગ",
     winningAndScoringItems: [
-      "હાથમાં સૌથી ઊંચો સર જીતે; સર ન હોય તો લીડ સુટનો સૌથી ઊંચો કાર્ડ જીતે.",
-      "બોલી બરાબર હિટ થાય તો 10 + જીતેલા હાથના પોઇન્ટ્સ; મિસ થાય તો 0.",
+      "હાથમાં સૌથી ઊંચો સર જીતે; સર ન હોય તો ઉત્તર સુટનું સૌથી ઊંચું પત્તુ જીતે.",
+      "બોલી બરાબર થાય તો 10 + જીતેલા હાથના પોઇન્ટ્સ; મિસ થાય તો 0.",
     ],
     scoreTableHeaders: ["બોલી", "જીતેલી", "પરિણામ", "રાઉન્ડ પોઇન્ટ્સ"],
     scoreTableRows: [
-      ["2", "2", "✓ હિટ", "+12"],
-      ["2", "1", "✗ મિસ", "0"],
+      ["2", "2", "✓ જીત", "+12"],
+      ["2", "1", "✗ હાર", "0"],
     ],
     trickExampleTitle: "હાથ ઉદાહરણ (સર: કાળી)",
-    trickLeadLabel: "લીડ",
+    trickLeadLabel: "ઉત્તર",
     trickFollowLabel: "ફોલો",
     trickTrumpWinLabel: "સર જીતે",
     controlsTitle: "બટનો અને નિયંત્રણો",
@@ -299,7 +309,7 @@ const HOW_TO_PLAY_COPY: Record<HowToPlayLanguage, HowToPlayCopy> = {
       { tag: "Copy code", description: "રૂમ કોડ ક્લિપબોર્ડમાં કૉપી કરો." },
       {
         tag: "Lock / Unlock room",
-        description: "હોસ્ટ નક્કી કરે કે નવા નામો જોડાઈ શકે કે નહીં.",
+        description: "હોસ્ટ નક્કી કરે કે નવા ખેલાડીઓ જોડાઈ શકે કે નહીં.",
       },
       {
         tag: "Start game",
@@ -312,17 +322,21 @@ const HOW_TO_PLAY_COPY: Record<HowToPlayLanguage, HowToPlayCopy> = {
         tagTone: "danger",
       },
       { tag: "બોલી X", description: "આ રાઉન્ડ માટે તમારી બોલી મોકલો." },
-      { tag: "Order hand", description: "સર સુટ પહેલા આવે એમ કાર્ડ ગોઠવો." },
-      { tag: "Remind", description: "જેનો ટર્ન છે તેને યાદ અપાવો (poke)." },
+      { tag: "Order hand", description: "સર સુટ પહેલા આવે એમ પત્તા ગોઠવો." },
+      { tag: "Remind", description: "જેનો ટર્ન છે તેને યાદ અપાવો." },
       {
         tag: "Winning tricks",
         description: "માત્ર તમારા જીતેલા હાથ જ જોઈ શકશો.",
       },
-      { tag: "Round summary", description: "તે ખેલાડીનો round-by-round સારાંશ જુઓ." },
+      {
+        tag: "Round summary",
+        description: "તે ખેલાડીનો દરેક રોઉન્ડનો સારાંશ જુઓ.",
+      },
       { tag: "Leave", description: "આ ડિવાઇસ પરથી રૂમ છોડો." },
       {
         tag: "Spectator",
-        description: "મેચ દરમિયાન જોડાયેલા spectator જોઈ શકે; restart પર ફક્ત ઑનલાઇન ખેલાડીઓ જોડાય.",
+        description:
+          "મેચ દરમિયાન જોડાયેલા દર્શક જોઈ શકે; નવી મેચ માં ફક્ત ઑનલાઇન ખેલાડીઓ જોડાય.",
       },
     ],
   },
@@ -331,9 +345,9 @@ const HOW_TO_PLAY_COPY: Record<HowToPlayLanguage, HowToPlayCopy> = {
 const sortPlayerScoreRows = (rows: PlayerScoreRow[]): PlayerScoreRow[] =>
   [...rows].sort(
     (left, right) =>
-      right.score - left.score
-      || left.name.localeCompare(right.name)
-      || left.playerId.localeCompare(right.playerId),
+      right.score - left.score ||
+      left.name.localeCompare(right.name) ||
+      left.playerId.localeCompare(right.playerId),
   );
 
 const toUserFacingErrorMessage = (message: string): string => {
@@ -557,7 +571,8 @@ export function GameClient() {
     socket.on("game:state", (payload: PublicGameView) => {
       const previousGameState = previousGameStateRef.current;
       const previousCompletedRoundCount =
-        previousGameState?.completedRounds.length ?? payload.completedRounds.length;
+        previousGameState?.completedRounds.length ??
+        payload.completedRounds.length;
       const roundCompleted =
         payload.completedRounds.length > previousCompletedRoundCount;
       if (payload.phase === "game_complete") {
@@ -586,21 +601,23 @@ export function GameClient() {
     });
     socket.on("session:transfer_code", (payload: TransferCodeState) => {
       if (
-        !payload
-        || typeof payload.transferCode !== "string"
-        || typeof payload.expiresAt !== "number"
+        !payload ||
+        typeof payload.transferCode !== "string" ||
+        typeof payload.expiresAt !== "number"
       ) {
         return;
       }
       setActiveTransferCode(payload);
-      showTimedInfoMessage("Transfer code generated. Enter it on your new device.");
+      showTimedInfoMessage(
+        "Transfer code generated. Enter it on your new device.",
+      );
       setError(null);
     });
     socket.on("turn:poked", (payload: TurnPokedPayload) => {
       if (
-        !payload
-        || typeof payload.targetPlayerId !== "string"
-        || typeof payload.byPlayerId !== "string"
+        !payload ||
+        typeof payload.targetPlayerId !== "string" ||
+        typeof payload.byPlayerId !== "string"
       ) {
         return;
       }
@@ -748,10 +765,7 @@ export function GameClient() {
 
   const isHost = roomState?.hostPlayerId === session?.playerId;
   const canStart =
-    isHost &&
-    roomState &&
-    roomState.players.length >= 2 &&
-    !gameState;
+    isHost && roomState && roomState.players.length >= 2 && !gameState;
   const canEndGame =
     isHost && gameState !== null && gameState.phase !== "game_complete";
   const isMatchInProgress =
@@ -778,18 +792,21 @@ export function GameClient() {
     isTrickRevealActive && gameState?.phase !== "trick_play";
   const activeTurnPlayerId = isRoundTransitionRevealActive
     ? null
-    : trickPlay?.turnPlayerId ?? bidding?.bidTurnPlayerId ?? null;
+    : (trickPlay?.turnPlayerId ?? bidding?.bidTurnPlayerId ?? null);
   const isMyTurn = Boolean(
     session?.playerId && activeTurnPlayerId === session.playerId,
   );
   const handRound = isRoundTransitionRevealActive
     ? trickPlay
-    : trickPlay ?? (bidding?.cardsDealt ? bidding : null);
+    : (trickPlay ?? (bidding?.cardsDealt ? bidding : null));
   const liveTrickLeaderPlayerId = useMemo(() => {
     if (!trickPlay) {
       return null;
     }
-    return getLiveTrickLeaderPlayerId(trickPlay.currentTrick, trickPlay.trumpSuit);
+    return getLiveTrickLeaderPlayerId(
+      trickPlay.currentTrick,
+      trickPlay.trumpSuit,
+    );
   }, [trickPlay]);
   const winnerIdInDisplayedTrick =
     revealedCompletedTrick?.winnerId ?? liveTrickLeaderPlayerId ?? null;
@@ -809,11 +826,11 @@ export function GameClient() {
     ? getPlayerName(activeTurnPlayerId)
     : null;
   const showRemindButton = Boolean(
-    activeTurnPlayerId
-      && turnPlayerName
-      && !isMyTurn
-      && !isRoundTransitionRevealActive
-      && (gameState?.phase === "bidding" || gameState?.phase === "trick_play"),
+    activeTurnPlayerId &&
+    turnPlayerName &&
+    !isMyTurn &&
+    !isRoundTransitionRevealActive &&
+    (gameState?.phase === "bidding" || gameState?.phase === "trick_play"),
   );
   const turnPromptText =
     isMyTurn && trickPlay
@@ -904,7 +921,9 @@ export function GameClient() {
       {TRUMP_SUIT_LABEL[suit]}{" "}
       <span
         className={`suit-symbol ${
-          suit === "H" || suit === "D" ? "suit-symbol--red" : "suit-symbol--dark"
+          suit === "H" || suit === "D"
+            ? "suit-symbol--red"
+            : "suit-symbol--dark"
         }`}
       >
         ({SUIT_SYMBOL[suit]})
@@ -957,9 +976,7 @@ export function GameClient() {
   }, [activeTurnPlayerId]);
 
   useEffect(() => {
-    document.title = isMyTurn
-      ? "Your turn • Kachuful"
-      : "Kachuful Multiplayer";
+    document.title = isMyTurn ? "Your turn • Kachuful" : "Kachuful Multiplayer";
     return () => {
       document.title = "Kachuful Multiplayer";
     };
@@ -1100,121 +1117,128 @@ export function GameClient() {
     <>
       {lobbyView}
       {session ? (
-      <section className="room-shell">
-        <div className="room-header">
-          <h2>Room {session.roomCode}</h2>
-          <button
-            aria-label="Copy room code"
-            className="secondary btn-info-soft room-copy-button"
-            onClick={() => {
-              void handleCopyRoomCode();
-            }}
-            type="button"
-          >
-            {copiedRoomCode ? "Copied" : "Copy code"}
-          </button>
-          {(roomState || gameState) ? (
+        <section className="room-shell">
+          <div className="room-header">
+            <h2>Room {session.roomCode}</h2>
             <button
-              aria-expanded={isRoomInfoExpanded}
-              className="secondary btn-info-soft"
-              onClick={() => setIsRoomInfoExpanded((current) => !current)}
+              aria-label="Copy room code"
+              className="secondary btn-info-soft room-copy-button"
+              onClick={() => {
+                void handleCopyRoomCode();
+              }}
               type="button"
             >
-              Room info {isRoomInfoExpanded ? "▴" : "▾"}
+              {copiedRoomCode ? "Copied" : "Copy code"}
             </button>
-          ) : null}
-        </div>
-        {isRoomInfoExpanded ? (
-          <>
-            <div className="row room-actions">
+            {roomState || gameState ? (
               <button
+                aria-expanded={isRoomInfoExpanded}
                 className="secondary btn-info-soft"
-                onClick={() => setShowHowToPlay(true)}
+                onClick={() => setIsRoomInfoExpanded((current) => !current)}
                 type="button"
               >
-                How to Play
+                Room info {isRoomInfoExpanded ? "▴" : "▾"}
               </button>
-              <button
-                className="secondary btn-warning-soft"
-                onClick={() => {
-                  socketRef.current?.emit("session:transfer_request");
-                }}
-                type="button"
-              >
-                Switch device
-              </button>
-              <button className="secondary btn-danger-soft" onClick={leaveSession} type="button">
-                Leave
-              </button>
-              {isHost && roomState ? (
-                <button
-                  className={`secondary ${
-                    roomState.locked ? "btn-success-soft" : "btn-warning-soft"
-                  }`}
-                  onClick={() => {
-                    socketRef.current?.emit("room:lock_toggle", {
-                      locked: !roomState.locked,
-                    });
-                  }}
-                  type="button"
-                >
-                  {roomState.locked ? "Unlock room" : "Lock room"}
-                </button>
-              ) : null}
-              {canEndGame ? (
-                <button
-                  className="btn-danger room-actions__primary"
-                  onClick={() => {
-                    socketRef.current?.emit("game:end");
-                  }}
-                  type="button"
-                >
-                  End game
-                </button>
-              ) : null}
-              {canStart ? (
-                <button
-                  className="btn-success room-actions__primary"
-                  onClick={() => {
-                    socketRef.current?.emit("game:start");
-                  }}
-                  type="button"
-                >
-                  Start game
-                </button>
-              ) : null}
-            </div>
-            <p className="room-status-line">
-              {gameStatusLabel}
-              {roomState ? ` • ${roomLockLabel}` : ""}
-            </p>
-            {roomState ? (
-              <div className="room-player-list">
-                {roomState.players.map((player) => {
-                  const isSpectator =
-                    isMatchInProgress && !currentGamePlayerIds.has(player.playerId);
-                  return (
-                    <p className="room-player" key={player.playerId}>
-                      <span
-                        aria-label={`${player.name} ${player.connected ? "online" : "offline"}`}
-                        className={`status-dot ${player.connected ? "status-dot--online" : "status-dot--offline"}`}
-                        role="img"
-                      />
-                      <span>{player.name}</span>
-                      {player.playerId === roomState.hostPlayerId ? (
-                        <span className="pill">host</span>
-                      ) : null}
-                      {isSpectator ? <span className="pill">spectator</span> : null}
-                    </p>
-                  );
-                })}
-              </div>
             ) : null}
-            {info ? <p>{info}</p> : null}
-            {error ? <p className="error">{error}</p> : null}
-          </>
-        ) : null}
-      </section>
+          </div>
+          {isRoomInfoExpanded ? (
+            <>
+              <div className="row room-actions">
+                <button
+                  className="secondary btn-info-soft"
+                  onClick={() => setShowHowToPlay(true)}
+                  type="button"
+                >
+                  How to Play
+                </button>
+                <button
+                  className="secondary btn-warning-soft"
+                  onClick={() => {
+                    socketRef.current?.emit("session:transfer_request");
+                  }}
+                  type="button"
+                >
+                  Switch device
+                </button>
+                <button
+                  className="secondary btn-danger-soft"
+                  onClick={leaveSession}
+                  type="button"
+                >
+                  Leave
+                </button>
+                {isHost && roomState ? (
+                  <button
+                    className={`secondary ${
+                      roomState.locked ? "btn-success-soft" : "btn-warning-soft"
+                    }`}
+                    onClick={() => {
+                      socketRef.current?.emit("room:lock_toggle", {
+                        locked: !roomState.locked,
+                      });
+                    }}
+                    type="button"
+                  >
+                    {roomState.locked ? "Unlock room" : "Lock room"}
+                  </button>
+                ) : null}
+                {canEndGame ? (
+                  <button
+                    className="btn-danger room-actions__primary"
+                    onClick={() => {
+                      socketRef.current?.emit("game:end");
+                    }}
+                    type="button"
+                  >
+                    End game
+                  </button>
+                ) : null}
+                {canStart ? (
+                  <button
+                    className="btn-success room-actions__primary"
+                    onClick={() => {
+                      socketRef.current?.emit("game:start");
+                    }}
+                    type="button"
+                  >
+                    Start game
+                  </button>
+                ) : null}
+              </div>
+              <p className="room-status-line">
+                {gameStatusLabel}
+                {roomState ? ` • ${roomLockLabel}` : ""}
+              </p>
+              {roomState ? (
+                <div className="room-player-list">
+                  {roomState.players.map((player) => {
+                    const isSpectator =
+                      isMatchInProgress &&
+                      !currentGamePlayerIds.has(player.playerId);
+                    return (
+                      <p className="room-player" key={player.playerId}>
+                        <span
+                          aria-label={`${player.name} ${player.connected ? "online" : "offline"}`}
+                          className={`status-dot ${player.connected ? "status-dot--online" : "status-dot--offline"}`}
+                          role="img"
+                        />
+                        <span>{player.name}</span>
+                        {player.playerId === roomState.hostPlayerId ? (
+                          <span className="pill">host</span>
+                        ) : null}
+                        {isSpectator ? (
+                          <span className="pill">spectator</span>
+                        ) : null}
+                      </p>
+                    );
+                  })}
+                </div>
+              ) : null}
+              {info ? <p>{info}</p> : null}
+              {error ? <p className="error">{error}</p> : null}
+            </>
+          ) : null}
+        </section>
       ) : null}
 
       {gameState ? (
@@ -1235,7 +1259,9 @@ export function GameClient() {
                   </span>
                   <span className="round-info-pill">
                     Trump:{" "}
-                    <strong>{trumpSuit ? getTrumpSuitDisplay(trumpSuit) : "-"}</strong>
+                    <strong>
+                      {trumpSuit ? getTrumpSuitDisplay(trumpSuit) : "-"}
+                    </strong>
                   </span>
                 </div>
               </div>
@@ -1276,7 +1302,8 @@ export function GameClient() {
                       const bidRaw = currentRound.bids[player.playerId];
                       const bid = typeof bidRaw === "number" ? bidRaw : null;
                       const won = currentRound.tricksWon[player.playerId] ?? 0;
-                      const isActiveTurn = activeTurnPlayerId === player.playerId;
+                      const isActiveTurn =
+                        activeTurnPlayerId === player.playerId;
                       const handsNeeded = bid === null ? 0 : bid - won;
                       const handsNeededText =
                         bid === null
@@ -1318,14 +1345,18 @@ export function GameClient() {
                           </div>
                           <p className="round-stats__meta">Bid: {bid ?? "-"}</p>
                           <p className="round-stats__meta">Won: {won}</p>
-                          <p className={`round-stats__needed ${handsNeededClass}`}>
+                          <p
+                            className={`round-stats__needed ${handsNeededClass}`}
+                          >
                             Hands needed: {handsNeededText}
                           </p>
                           <button
                             aria-label={`View winning tricks for ${player.name}`}
                             className="secondary btn-info-soft round-stats__button"
                             disabled={winningTricksDisabled}
-                            onClick={() => setSelectedWinnerPlayerId(player.playerId)}
+                            onClick={() =>
+                              setSelectedWinnerPlayerId(player.playerId)
+                            }
                             title={
                               canViewWinningTricks
                                 ? wonCount === 0
@@ -1341,7 +1372,9 @@ export function GameClient() {
                             aria-label={`View round summary for ${player.name}`}
                             className="secondary btn-info-soft round-stats__button"
                             disabled={gameState.completedRounds.length === 0}
-                            onClick={() => setSelectedSummaryPlayerId(player.playerId)}
+                            onClick={() =>
+                              setSelectedSummaryPlayerId(player.playerId)
+                            }
                             type="button"
                           >
                             Round summary
@@ -1379,9 +1412,13 @@ export function GameClient() {
                         <span className="turn-banner__label">
                           {isMyTurn ? "Your turn" : "Current turn"}
                         </span>
-                        <span className="turn-banner__text">{turnPromptText}</span>
+                        <span className="turn-banner__text">
+                          {turnPromptText}
+                        </span>
                       </div>
-                      {showRemindButton && activeTurnPlayerId && turnPlayerName ? (
+                      {showRemindButton &&
+                      activeTurnPlayerId &&
+                      turnPlayerName ? (
                         <button
                           className="secondary btn-warning-soft turn-banner__remind"
                           onClick={() => {
@@ -1400,7 +1437,9 @@ export function GameClient() {
                     <div className="turn-order-strip">
                       <span className="turn-order-chip turn-order-chip--next">
                         Next Turn:{" "}
-                        <strong>{getPlayerName(turnOrderSnapshot.nextId)}</strong>
+                        <strong>
+                          {getPlayerName(turnOrderSnapshot.nextId)}
+                        </strong>
                       </span>
                     </div>
                   ) : null}
@@ -1559,7 +1598,9 @@ export function GameClient() {
                           {gameState.players.map((player) => (
                             <th
                               key={`final-breakdown-header-${player.playerId}`}
-                              style={{ minWidth: `${Math.max(player.name.length + 1, 8)}ch` }}
+                              style={{
+                                minWidth: `${Math.max(player.name.length + 1, 8)}ch`,
+                              }}
                             >
                               {player.name}
                             </th>
@@ -1727,7 +1768,9 @@ export function GameClient() {
                     const total = gameState.scores[playerId] ?? 0;
                     const hit = bid === won;
                     return (
-                      <tr key={`round-summary-${selectedCompletedRound.roundIndex}-${playerId}`}>
+                      <tr
+                        key={`round-summary-${selectedCompletedRound.roundIndex}-${playerId}`}
+                      >
                         <td>{player.name}</td>
                         <td>{bid}</td>
                         <td>{won}</td>
@@ -1735,7 +1778,9 @@ export function GameClient() {
                           <span
                             aria-label={hit ? "Hit" : "Miss"}
                             className={`summary-result ${
-                              hit ? "summary-result--hit" : "summary-result--miss"
+                              hit
+                                ? "summary-result--hit"
+                                : "summary-result--miss"
                             }`}
                             title={hit ? "Hit" : "Miss"}
                           >
@@ -1794,7 +1839,8 @@ export function GameClient() {
                   {gameState.completedRounds.map((round) => {
                     const bid = round.bids[selectedSummaryPlayerId] ?? 0;
                     const won = round.tricksWon[selectedSummaryPlayerId] ?? 0;
-                    const points = round.scoreDelta[selectedSummaryPlayerId] ?? 0;
+                    const points =
+                      round.scoreDelta[selectedSummaryPlayerId] ?? 0;
                     const hit = bid === won;
                     return (
                       <tr
@@ -1808,7 +1854,9 @@ export function GameClient() {
                           <span
                             aria-label={hit ? "Hit" : "Miss"}
                             className={`summary-result ${
-                              hit ? "summary-result--hit" : "summary-result--miss"
+                              hit
+                                ? "summary-result--hit"
+                                : "summary-result--miss"
                             }`}
                             title={hit ? "Hit" : "Miss"}
                           >
@@ -1849,7 +1897,9 @@ export function GameClient() {
                   <button
                     aria-pressed={howToPlayLanguage === "en"}
                     className={`howto-language-button ${
-                      howToPlayLanguage === "en" ? "howto-language-button--active" : ""
+                      howToPlayLanguage === "en"
+                        ? "howto-language-button--active"
+                        : ""
                     }`}
                     onClick={() => setHowToPlayLanguage("en")}
                     type="button"
@@ -1859,7 +1909,9 @@ export function GameClient() {
                   <button
                     aria-pressed={howToPlayLanguage === "gu"}
                     className={`howto-language-button ${
-                      howToPlayLanguage === "gu" ? "howto-language-button--active" : ""
+                      howToPlayLanguage === "gu"
+                        ? "howto-language-button--active"
+                        : ""
                     }`}
                     onClick={() => setHowToPlayLanguage("gu")}
                     type="button"
@@ -1928,14 +1980,20 @@ export function GameClient() {
                 </div>
 
                 <div className="howto-trick">
-                  <p className="howto-trick__title">{howToPlayCopy.trickExampleTitle}</p>
+                  <p className="howto-trick__title">
+                    {howToPlayCopy.trickExampleTitle}
+                  </p>
                   <div className="cards">
                     <span className="trick-card">
-                      <span className="trick-card__player">{howToPlayCopy.trickLeadLabel}</span>
+                      <span className="trick-card__player">
+                        {howToPlayCopy.trickLeadLabel}
+                      </span>
                       <PlayingCard cardId="9H" />
                     </span>
                     <span className="trick-card">
-                      <span className="trick-card__player">{howToPlayCopy.trickFollowLabel}</span>
+                      <span className="trick-card__player">
+                        {howToPlayCopy.trickFollowLabel}
+                      </span>
                       <PlayingCard cardId="QH" />
                     </span>
                     <span className="trick-card trick-card--winner">
@@ -1955,7 +2013,9 @@ export function GameClient() {
                     <li key={`howto-control-${item.tag}`}>
                       <span
                         className={`howto-control-tag ${
-                          item.tagTone ? `howto-control-tag--${item.tagTone}` : ""
+                          item.tagTone
+                            ? `howto-control-tag--${item.tagTone}`
+                            : ""
                         }`}
                       >
                         {item.tag}

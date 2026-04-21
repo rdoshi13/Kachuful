@@ -67,7 +67,9 @@ describe("GameClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     await waitFor(() => {
-      expect(screen.queryByText("How to Play Kachuful")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("How to Play Kachuful"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -77,11 +79,21 @@ describe("GameClient", () => {
     fireEvent.click(await screen.findByRole("button", { name: "How to Play" }));
     fireEvent.click(await screen.findByRole("button", { name: "ગુજરાતી" }));
 
-    expect(await screen.findByText("કચ્છૂફુલ કેવી રીતે રમવું")).toBeInTheDocument();
-    expect(await screen.findByText("રાઉન્ડ ફ્લો")).toBeInTheDocument();
-    expect(await screen.findByText("સર દરેક રાઉન્ડે ફરે છે: કાળી, ચરકટ, ફુલ્લી, લાલ.")).toBeInTheDocument();
-    expect(await screen.findByText("હાથ ઉદાહરણ (સર: કાળી)")).toBeInTheDocument();
-    expect(await screen.findByText("ફક્ત હોસ્ટ; ઓછામાં ઓછા 2 ઑનલાઇન ખેલાડીઓ જરૂરી.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("કાચુફુલ કેવી રીતે રમવું"),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("રમત ના નિયમો")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "સર દરેક રાઉન્ડે ફરે છે: કાળી, ચરકટ, ફુલ્લી, લાલ.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("હાથ ઉદાહરણ (સર: કાળી)"),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("ફક્ત હોસ્ટ; ઓછામાં ઓછા 2 ઑનલાઇન ખેલાડીઓ જરૂરી."),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "English" }));
     expect(await screen.findByText("How to Play Kachuful")).toBeInTheDocument();
@@ -148,7 +160,9 @@ describe("GameClient", () => {
       ],
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Switch device" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Switch device" }),
+    );
 
     const transferRequestEvent = lastSocket?.emitted.find(
       (entry) => entry.event === "session:transfer_request",
@@ -300,7 +314,9 @@ describe("GameClient", () => {
       ],
     });
 
-    expect(await screen.findByRole("button", { name: "Start game" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Start game" }),
+    ).toBeInTheDocument();
   });
 
   it("toggles room details from the room header dropdown", async () => {
@@ -332,7 +348,9 @@ describe("GameClient", () => {
     const roomInfoButton = await screen.findByRole("button", {
       name: /Room info/i,
     });
-    expect(await screen.findByRole("button", { name: "How to Play" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "How to Play" }),
+    ).toBeInTheDocument();
     expect(await screen.findByText(/Lobby open/)).toBeInTheDocument();
 
     fireEvent.click(roomInfoButton);
@@ -342,7 +360,9 @@ describe("GameClient", () => {
     expect(screen.queryByText(/Lobby open/)).toBeNull();
 
     fireEvent.click(await screen.findByRole("button", { name: /Room info/i }));
-    expect(await screen.findByRole("button", { name: "How to Play" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "How to Play" }),
+    ).toBeInTheDocument();
     expect(await screen.findByText(/Lobby open/)).toBeInTheDocument();
   });
 
@@ -365,7 +385,9 @@ describe("GameClient", () => {
 
     render(<GameClient />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Copy room code" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Copy room code" }),
+    );
 
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith("ROOM01");
@@ -430,7 +452,9 @@ describe("GameClient", () => {
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "End game" }));
-    const endEvent = lastSocket?.emitted.find((entry) => entry.event === "game:end");
+    const endEvent = lastSocket?.emitted.find(
+      (entry) => entry.event === "game:end",
+    );
     expect(endEvent).toBeTruthy();
   });
 
@@ -487,7 +511,9 @@ describe("GameClient", () => {
     });
 
     fireEvent.click(await screen.findByRole("button", { name: "Lock room" }));
-    const lockEvent = lastSocket?.emitted.find((entry) => entry.event === "room:lock_toggle");
+    const lockEvent = lastSocket?.emitted.find(
+      (entry) => entry.event === "room:lock_toggle",
+    );
     expect(lockEvent?.payload).toEqual({ locked: true });
 
     lastSocket?.trigger("room:state", {
@@ -500,7 +526,9 @@ describe("GameClient", () => {
       ],
     });
 
-    expect(await screen.findByRole("button", { name: "Unlock room" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Unlock room" }),
+    ).toBeInTheDocument();
   });
 
   it("shows remind button for current-turn player and emits turn:poke", async () => {
@@ -550,8 +578,12 @@ describe("GameClient", () => {
       },
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Remind Guest" }));
-    const pokeEvent = lastSocket?.emitted.find((entry) => entry.event === "turn:poke");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Remind Guest" }),
+    );
+    const pokeEvent = lastSocket?.emitted.find(
+      (entry) => entry.event === "turn:poke",
+    );
     expect(pokeEvent?.payload).toEqual({ targetPlayerId: "p2" });
   });
 
@@ -602,7 +634,9 @@ describe("GameClient", () => {
       },
     });
 
-    const banner = (await screen.findByText("Place your bid.")).closest(".turn-banner");
+    const banner = (await screen.findByText("Place your bid.")).closest(
+      ".turn-banner",
+    );
     expect(banner).not.toHaveClass("turn-banner--poked");
 
     lastSocket?.trigger("turn:poked", {
@@ -612,9 +646,9 @@ describe("GameClient", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Place your bid.").closest(".turn-banner")).toHaveClass(
-        "turn-banner--poked",
-      );
+      expect(
+        screen.getByText("Place your bid.").closest(".turn-banner"),
+      ).toHaveClass("turn-banner--poked");
     });
   });
 
@@ -729,14 +763,22 @@ describe("GameClient", () => {
     expect(await screen.findByText("Round Flow")).toBeInTheDocument();
     expect(await screen.findByText("Winning & Scoring")).toBeInTheDocument();
     expect(await screen.findByText("Buttons & Controls")).toBeInTheDocument();
-    expect(await screen.findByText("You must follow lead suit whenever possible.")).toBeInTheDocument();
-    expect(await screen.findByText("Host only; requires at least 2 online players.")).toBeInTheDocument();
-    expect(await screen.findByText("Sort cards with trump suit first.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("You must follow lead suit whenever possible."),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("Host only; requires at least 2 online players."),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("Sort cards with trump suit first."),
+    ).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => {
-      expect(screen.queryByText("How to Play Kachuful")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("How to Play Kachuful"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -954,16 +996,16 @@ describe("GameClient", () => {
 
     await screen.findByRole("button", { name: "3C" });
 
-    const initialOrder = Array.from(document.querySelectorAll("button.card-button")).map(
-      (element) => element.getAttribute("aria-label"),
-    );
+    const initialOrder = Array.from(
+      document.querySelectorAll("button.card-button"),
+    ).map((element) => element.getAttribute("aria-label"));
     expect(initialOrder).toEqual(["3C", "2D", "5S", "KH", "AD"]);
 
     fireEvent.click(await screen.findByRole("button", { name: "Order hand" }));
 
-    const orderedCards = Array.from(document.querySelectorAll("button.card-button")).map(
-      (element) => element.getAttribute("aria-label"),
-    );
+    const orderedCards = Array.from(
+      document.querySelectorAll("button.card-button"),
+    ).map((element) => element.getAttribute("aria-label"));
     expect(orderedCards).toEqual(["AD", "2D", "5S", "KH", "3C"]);
   });
 
@@ -1145,9 +1187,7 @@ describe("GameClient", () => {
     const guestRow = guestWinningButton.closest(".round-stats__row");
     expect(guestRow).toHaveClass("round-stats__row--active-turn");
 
-    fireEvent.click(
-      hostWinningButton,
-    );
+    fireEvent.click(hostWinningButton);
 
     const winningTricksDialog = await screen.findByRole("dialog");
     expect(winningTricksDialog).toBeInTheDocument();
@@ -1212,7 +1252,8 @@ describe("GameClient", () => {
     expect(await screen.findByText("Cards on table")).toBeInTheDocument();
     expect(document.querySelectorAll(".trick-card--winner")).toHaveLength(1);
     expect(
-      document.querySelector(".trick-card--winner .trick-card__player")?.textContent,
+      document.querySelector(".trick-card--winner .trick-card__player")
+        ?.textContent,
     ).toBe("Host");
 
     lastSocket?.trigger("game:state", {
@@ -1307,7 +1348,9 @@ describe("GameClient", () => {
       },
     });
 
-    const turnOrderStrip = (await screen.findByText("Next Turn:")).closest(".turn-order-strip");
+    const turnOrderStrip = (await screen.findByText("Next Turn:")).closest(
+      ".turn-order-strip",
+    );
     expect(turnOrderStrip).toBeTruthy();
     expect(turnOrderStrip).toHaveTextContent(/Next Turn:\s*Third/);
   });
@@ -1379,7 +1422,9 @@ describe("GameClient", () => {
       expect(document.querySelectorAll(".trick-card")).toHaveLength(3);
     });
     expect(document.querySelectorAll(".trick-card--winner")).toHaveLength(1);
-    expect(screen.queryByRole("button", { name: "Bid 0" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Bid 0" }),
+    ).not.toBeInTheDocument();
 
     await new Promise((resolve) => {
       setTimeout(resolve, 2100);
@@ -1387,7 +1432,9 @@ describe("GameClient", () => {
     await waitFor(() => {
       expect(document.querySelectorAll(".trick-card")).toHaveLength(0);
     });
-    expect(await screen.findByRole("button", { name: "Bid 0" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Bid 0" }),
+    ).toBeInTheDocument();
   });
 
   it("shows trump suit label, trump preview, and cards-per-round info", async () => {
@@ -1516,16 +1563,18 @@ describe("GameClient", () => {
       }),
     );
 
-    expect(await screen.findByText("Host Round-by-Round Summary")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Host Round-by-Round Summary"),
+    ).toBeInTheDocument();
     expect(await screen.findByText("Round Points")).toBeInTheDocument();
     expect(
-      await screen.findByText((_, element) =>
-        element?.textContent?.trim() === "Spades (♠)",
+      await screen.findByText(
+        (_, element) => element?.textContent?.trim() === "Spades (♠)",
       ),
     ).toBeInTheDocument();
     expect(
-      await screen.findByText((_, element) =>
-        element?.textContent?.trim() === "Diamonds (♦)",
+      await screen.findByText(
+        (_, element) => element?.textContent?.trim() === "Diamonds (♦)",
       ),
     ).toBeInTheDocument();
     expect(await screen.findByText("+11")).toBeInTheDocument();
@@ -1627,9 +1676,10 @@ describe("GameClient", () => {
 
     expect(await screen.findByText("Round 1 Summary")).toBeInTheDocument();
     expect(
-      await screen.findByText((_, element) =>
-        element?.textContent?.replace(/\s+/g, " ").trim() ===
-        "Cards: 1 | Trump: Spades (♠)",
+      await screen.findByText(
+        (_, element) =>
+          element?.textContent?.replace(/\s+/g, " ").trim() ===
+          "Cards: 1 | Trump: Spades (♠)",
       ),
     ).toBeInTheDocument();
     expect(await screen.findByText("Total")).toBeInTheDocument();
@@ -1760,13 +1810,21 @@ describe("GameClient", () => {
 
     expect(await screen.findByText("Game Complete")).toBeInTheDocument();
     expect(screen.queryByText("Scoreboard")).not.toBeInTheDocument();
-    expect(await screen.findByText("Winner: Host (33 points)")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Winner: Host (33 points)"),
+    ).toBeInTheDocument();
     expect(await screen.findByText("Final Standings")).toBeInTheDocument();
-    expect(await screen.findByText("Round-by-Round Breakdown")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Round-by-Round Breakdown"),
+    ).toBeInTheDocument();
     expect(await screen.findByText("Spades")).toBeInTheDocument();
     expect(await screen.findByText("1/1 (+11)")).toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "Start New Game" }));
-    const restartEvent = lastSocket?.emitted.find((entry) => entry.event === "game:restart");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Start New Game" }),
+    );
+    const restartEvent = lastSocket?.emitted.find(
+      (entry) => entry.event === "game:restart",
+    );
     expect(restartEvent).toBeTruthy();
   });
 });
